@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useApp } from "../../context/AppContext";
+import { useAdmin } from "../../context/AdminContext";
+
 import {
   AlertCircle,
   Mail,
@@ -12,6 +14,44 @@ import {
 import { toast } from "sonner";
 import { DEMO_CUSTOMERS } from "../../data/users";
 import { motion } from "motion/react";
+
+
+const MOCK_ADMIN_USERS = [
+  {
+    email: "admin@kinderland.vn",
+    password: "admin123",
+    user: {
+      id: "admin-1",
+      email: "admin@kinderland.vn",
+      name: "Nguyễn Văn Admin",
+      role: "admin",
+    },
+  },
+  {
+    email: "manager@kinderland.vn",
+    password: "manager123",
+    user: {
+      id: "manager-1",
+      email: "manager@kinderland.vn",
+      name: "Trần Thị Quản Lý",
+      role: "manager",
+      storeId: "store-1",
+      storeName: "Kinderland Vincom Center Đồng Khởi",
+    },
+  },
+  {
+    email: "staff1@kinderland.vn",
+    password: "staff123",
+    user: {
+      id: "staff-1",
+      email: "staff1@kinderland.vn",
+      name: "Trần Thị Nhân Viên",
+      role: "staff",
+      storeId: "store-1",
+      storeName: "Kinderland Vincom Center Đồng Khởi",
+    },
+  },
+];
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -26,6 +66,7 @@ export default function LoginPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
+  const { loginAdmin } = useAdmin();
   const navigate = useNavigate();
   const { login, register } = useApp();
 
@@ -33,30 +74,38 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (isLogin) {
+      const foundAdmin = MOCK_ADMIN_USERS.find(
+        (u) => u.email === email && u.password === password
+      );
+
+      if (foundAdmin) {
+        loginAdmin(foundAdmin.user);
+
+        toast.success(`Xin chào ${foundAdmin.user.name}`);
+
+        if (foundAdmin.user.role === "admin") {
+          navigate("/admin/dashboard");
+        } else if (foundAdmin.user.role === "manager") {
+          navigate("/manager/dashboard");
+        } else {
+          navigate("/staff/dashboard");
+        }
+
+        return;
+      }
+
+      // 2️⃣ Nếu không phải admin thì check customer
       const foundCustomer = DEMO_CUSTOMERS.find(
-        (c) => c.email === email && c.password === password,
+        (c) => c.email === email && c.password === password
       );
 
-      login(email, password);
-      toast.success(
-        foundCustomer
-          ? `Chào mừng trở lại, ${foundCustomer.name}!`
-          : "Đăng nhập thành công!",
-      );
-      navigate("/");
-    } else {
-      const payload = {
-        username,
-        phone,
-        email,
-        firstName,
-        lastName,
-        password,
-      };
-
-      register(email, password, `${lastName} ${firstName}`);
-      toast.success("Đăng ký thành công!");
-      navigate("/");
+      if (foundCustomer) {
+        login(email, password);
+        toast.success(`Chào mừng trở lại, ${foundCustomer.name}!`);
+        navigate("/");
+      } else {
+        toast.error("Email hoặc mật khẩu không đúng!");
+      }
     }
   };
 
@@ -232,18 +281,8 @@ export default function LoginPage() {
                 <p className="text-xs text-gray-600 mt-1">
                   Nguyễn Thị Lan – 1,500 điểm
                 </p>
-              </div>      
-            </div>
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => navigate("/admin/login")}
-                className="text-xs text-[#AF140B] hover:underline font-medium"
-              >
-                Đăng nhập dành cho Admin/Nhân viên →
-              </button>
-            </div>
+              </div>
+            </div>            
           </div>
         </div>
 
