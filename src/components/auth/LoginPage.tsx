@@ -14,6 +14,8 @@ import {
 import { toast } from "sonner";
 import { DEMO_CUSTOMERS } from "../../data/users";
 import { motion } from "motion/react";
+import api from "../../services/api";
+import GoogleAuthService from "../../services/googleAuth";
 
 
 const MOCK_ADMIN_USERS = [
@@ -109,6 +111,50 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      toast.info("Đang khởi tạo Google Sign-In...");
+
+      // Initialize Google Auth Service
+      const googleAuth = GoogleAuthService.getInstance();
+      await googleAuth.initialize();
+
+      // Get Google credential token
+      const credential = await googleAuth.signIn();
+      console.log('Google credential received:', credential ? 'Yes' : 'No');
+      console.log('Credential length:', credential?.length || 0);
+
+      toast.info("Đang xác thực với server...");
+
+      // Send token to backend
+      const response = await api.loginWithGoogle(credential);
+      console.log('Backend response:', response);
+
+      // Handle successful login — backend returns BaseResponse<AuthResponse>
+      // with data: { accessToken, refreshToken, email, role }
+      if (response.data?.accessToken) {
+        login(response.data.email, ''); // Update context with user data
+        toast.success(`Chào mừng ${response.data.email}!`);
+        navigate("/");
+      } else {
+        console.log('Unexpected response structure:', response);
+        throw new Error('Invalid response from server');
+      }
+    } catch (error: any) {
+      console.error('Google login failed:', error);
+
+      if (error.message?.includes('popup')) {
+        toast.error('Vui lòng cho phép popup để đăng nhập với Google');
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.error('Không thể kết nối tới server. Vui lòng thử lại sau.');
+      } else if (error.message?.includes('origin')) {
+        toast.error('Lỗi cấu hình Google OAuth. Liên hệ admin.');
+      } else {
+        toast.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#FFE5E3] via-white to-[#FFE5E3]">
       {/* Container */}
@@ -188,11 +234,7 @@ export default function LoginPage() {
             {/* Google Sign In */}
             <button
               type="button"
-              onClick={() =>
-                toast.info(
-                  "Tính năng đăng nhập Google đang được phát triển",
-                )
-              }
+              onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold mb-4"
             >
               <svg className="size-5" viewBox="0 0 24 24">
