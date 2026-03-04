@@ -1,75 +1,149 @@
-import React from "react";
-import { Link, useParams } from "react-router";
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import ProductCard from "../shop/ProductCard";
-import { products, brands } from "../../data/products";
-import { ArrowLeft, Award } from "lucide-react";
 import Pagination from "../common/Pagination";
+import api from "../../services/api";
 
+/* ===============================
+   TYPES
+================================= */
+interface Brand {
+  id: number;
+  name: string;
+  logoUrl: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl: string;
+}
+
+/* ===============================
+   COMPONENT
+================================= */
 export default function BrandsPage() {
-  const { brandName } = useParams();
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const { brandName } = useParams<{ brandName?: string }>();
+
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
+
+  const [currentPage, setCurrentPage] = useState(1);
+
   const itemsPerPage = 20;
 
-  const brandLogos: Record<string, string> = {
-    Hasbro: "🎮",
-    LEGO: "🧱",
-    Mattel: "🎪",
-    Bandai: "🤖",
-    Disney: "🏰",
-    Marvel: "⚡",
-    "Hot Wheels": "🏎️",
-    NERF: "🎯",
-    "Play-Doh": "🎨",
-    "Fisher-Price": "👶",
-    "Melissa & Doug": "🌈",
-    "Little Tikes": "🎡",
-    Crayola: "🖍️",
-    "Build-A-Bear": "🧸",
-    Pokemon: "⚡",
-    "National Geographic": "🌍",
-    "Robocar Poli": "🚓",
-    "MGA Entertainment": "✨",
-    Nintendo: "🎮",
-    DJI: "🚁",
-  };
+  /* ===============================
+     FETCH BRANDS
+  ================================= */
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        setBrandsLoading(true);
 
+        const response = await api.get("/api/v1/brands");
+
+        // xử lý linh hoạt theo structure backend
+        const data = response.data;
+        const brandsData = Array.isArray(data)
+          ? data
+          : data.data;
+
+        setBrands(brandsData || []);
+      } catch (error) {
+        console.error("Lỗi lấy brands:", error);
+      } finally {
+        setBrandsLoading(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
+
+  /* ===============================
+     FETCH PRODUCTS THEO BRAND
+  ================================= */
+  useEffect(() => {
+    if (!brandName) return;
+
+    const fetchProducts = async () => {
+      try {
+        setProductsLoading(true);
+
+        const response = await api.get(
+          `/api/v1/products?brand=${brandName}`
+        );
+
+        const data = response.data;
+        const productsData = Array.isArray(data)
+          ? data
+          : data.data;
+
+        setProducts(productsData || []);
+      } catch (error) {
+        console.error("Lỗi lấy products:", error);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [brandName]);
+
+  /* ===============================
+     BRAND DETAIL PAGE
+  ================================= */
   if (brandName) {
-    const filteredProducts = products.filter(
-      (p) => p.brand === brandName,
+    const currentBrand = brands.find(
+      (b) => b.name === brandName
     );
 
-    // Pagination
     const totalPages = Math.ceil(
-      filteredProducts.length / itemsPerPage,
+      products.length / itemsPerPage
     );
+
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const currentProducts = filteredProducts.slice(
+    const currentProducts = products.slice(
       startIndex,
-      startIndex + itemsPerPage,
+      startIndex + itemsPerPage
     );
 
     return (
       <div className="bg-gray-50 min-h-screen">
-        {/* Brand Header */}
-        <div className="bg-gradient-to-r from-[#78A2D2] via-[#6A94C4] to-[#78A2D2] text-white py-12">
+        {/* HEADER */}
+        <div className="text-black py-12">
           <div className="container mx-auto px-4">
             <Link
               to="/brands"
-              className="inline-flex items-center gap-2 text-white/90 hover:text-white mb-4"
+              className="inline-flex items-center gap-2 text-black/90 hover:text-black mb-4"
             >
               <ArrowLeft className="size-5" />
               Quay lại thương hiệu
             </Link>
+
             <div className="flex items-center gap-4">
-              <div className="text-6xl">
-                {brandLogos[brandName] || "🎁"}
+              <div className="h-20 w-20 bg-white rounded-xl flex items-center justify-center p-2">
+                {currentBrand?.logoUrl ? (
+                  <img
+                    src={currentBrand.logoUrl}
+                    alt={currentBrand.name}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-3xl">🎁</span>
+                )}
               </div>
+
               <div>
                 <h1 className="text-4xl font-bold">
                   {brandName}
                 </h1>
-                <p className="text-white/90 mt-2">
-                  {filteredProducts.length} sản phẩm
+                <p className="text-black/90 mt-2">
+                  {products.length} sản phẩm
                   {totalPages > 1 &&
                     ` - Trang ${currentPage}/${totalPages}`}
                 </p>
@@ -78,9 +152,13 @@ export default function BrandsPage() {
           </div>
         </div>
 
-        {/* Products */}
+        {/* PRODUCTS */}
         <div className="container mx-auto px-4 py-8">
-          {currentProducts.length === 0 ? (
+          {productsLoading ? (
+            <div className="text-center py-20">
+              <p>Đang tải sản phẩm...</p>
+            </div>
+          ) : currentProducts.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-gray-500 text-lg">
                 Chưa có sản phẩm của thương hiệu này
@@ -97,17 +175,19 @@ export default function BrandsPage() {
                 ))}
               </div>
 
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => {
-                  setCurrentPage(page);
-                  window.scrollTo({
-                    top: 0,
-                    behavior: "smooth",
-                  });
-                }}
-              />
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    window.scrollTo({
+                      top: 0,
+                      behavior: "smooth",
+                    });
+                  }}
+                />
+              )}
             </>
           )}
         </div>
@@ -115,42 +195,55 @@ export default function BrandsPage() {
     );
   }
 
+  /* ===============================
+     BRAND LIST PAGE
+  ================================= */
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-5xl font-bold mb-3 text-[#AF140B]">
           Thương Hiệu
         </h1>
+
         <p className="text-gray-700 text-lg mb-8 font-semibold">
           Khám phá các thương hiệu đồ chơi hàng đầu thế giới
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {brands.map((brand) => {
-            const count = products.filter(
-              (p) => p.brand === brand,
-            ).length;
-            const logo = brandLogos[brand] || "🎁";
-
-            return (
+        {brandsLoading ? (
+          <div className="text-center py-20">
+            <p>Đang tải thương hiệu...</p>
+          </div>
+        ) : brands.length === 0 ? (
+          <div className="text-center py-20">
+            <p>Không có thương hiệu</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {brands.map((brand) => (
               <Link
-                key={brand}
-                to={`/brands/${brand}`}
+                key={brand.id}
+                to={`/brands/${brand.name}`}
                 className="group"
               >
-                <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden p-8 text-center border-2 border-gray-100 hover:border-[#78A2D2]">
-                  <div className="text-6xl mb-4">{logo}</div>
-                  <h3 className="font-bold text-gray-800 mb-2 group-hover:text-[#78A2D2] transition-colors">
-                    {brand}
+                <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden p-8 text-center border-2 border-gray-100 hover:border-[#AF140B]">
+                  <img
+                    src={brand.logoUrl}
+                    alt={brand.name}
+                    className="h-20 w-20 object-contain mx-auto mb-4"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/80?text=Logo";
+                    }}
+                  />
+
+                  <h3 className="font-bold text-gray-800 mb-2 group-hover:text-[#AF140B] transition-colors">
+                    {brand.name}
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    {count} sản phẩm
-                  </p>
                 </div>
               </Link>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

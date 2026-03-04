@@ -8,6 +8,35 @@ if (!API_BASE_URL) {
 
 export const api = {
   /**
+   * Login with email & password
+   */
+  loginWithEmail: async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Login failed");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Login API error:", error);
+      throw error;
+    }
+  },
+  
+
+  /**
    * Login with Google
    * @param credential - Google OAuth credential token
    */
@@ -18,7 +47,7 @@ export const api = {
         tokenLength: credential?.length || 0
       });
 
-      const response = await fetch(`${API_BASE_URL}/auth/login/google`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

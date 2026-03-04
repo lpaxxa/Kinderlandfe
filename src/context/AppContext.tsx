@@ -6,6 +6,7 @@ interface User {
   email: string;
   name: string;
   phone?: string;
+  role?: string;
   address?: string;
   membershipTier?: 'bronze' | 'silver' | 'gold';
   points?: number;
@@ -35,6 +36,7 @@ interface Voucher {
 }
 
 interface AppContextType {
+  setUser: (user: User | null) => void;
   user: User | null;
   login: (email: string, password: string) => void;
   register: (email: string, password: string, name: string) => void;
@@ -75,7 +77,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const foundCustomer = DEMO_CUSTOMERS.find(
       (c) => c.email === email && c.password === password
     );
-    
+
     if (foundCustomer) {
       setUser({
         id: foundCustomer.id,
@@ -165,6 +167,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <AppContext.Provider
       value={{
         user,
+        setUser,
         login,
         register,
         logout,

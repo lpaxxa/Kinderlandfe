@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useAdmin } from "../../context/AdminContext";
 
@@ -12,48 +12,9 @@ import {
   Smile,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DEMO_CUSTOMERS } from "../../data/users";
 import { motion } from "motion/react";
 import api from "../../services/api";
 import GoogleAuthService from "../../services/googleAuth";
-
-
-const MOCK_ADMIN_USERS = [
-  {
-    email: "admin@kinderland.vn",
-    password: "admin123",
-    user: {
-      id: "admin-1",
-      email: "admin@kinderland.vn",
-      name: "Nguyễn Văn Admin",
-      role: "admin",
-    },
-  },
-  {
-    email: "manager@kinderland.vn",
-    password: "manager123",
-    user: {
-      id: "manager-1",
-      email: "manager@kinderland.vn",
-      name: "Trần Thị Quản Lý",
-      role: "manager",
-      storeId: "store-1",
-      storeName: "Kinderland Vincom Center Đồng Khởi",
-    },
-  },
-  {
-    email: "staff1@kinderland.vn",
-    password: "staff123",
-    user: {
-      id: "staff-1",
-      email: "staff1@kinderland.vn",
-      name: "Trần Thị Nhân Viên",
-      role: "staff",
-      storeId: "store-1",
-      storeName: "Kinderland Vincom Center Đồng Khởi",
-    },
-  },
-];
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -72,42 +33,60 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, register } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { setUser } = useApp();
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isLogin) {
-      const foundAdmin = MOCK_ADMIN_USERS.find(
-        (u) => u.email === email && u.password === password
-      );
+    try {
+      const response = await api.post("/api/v1/auth/login", {
+        email,
+        password,
+      });
+      console.log("FULL RESPONSE:", response);
+      console.log("DATA:", response.data);
+      const data = response.data;
 
-      if (foundAdmin) {
-        loginAdmin(foundAdmin.user);
 
-        toast.success(`Xin chào ${foundAdmin.user.name}`);
-
-        if (foundAdmin.user.role === "admin") {
-          navigate("/admin/dashboard");
-        } else if (foundAdmin.user.role === "manager") {
-          navigate("/manager/dashboard");
-        } else {
-          navigate("/staff/dashboard");
-        }
-
+      if (!data?.accessToken) {
+        toast.error("Không nhận được token!");
         return;
       }
 
-      // 2️⃣ Nếu không phải admin thì check customer
-      const foundCustomer = DEMO_CUSTOMERS.find(
-        (c) => c.email === email && c.password === password
-      );
+      const { accessToken, refreshToken, role, email: userEmail } = data;
 
-      if (foundCustomer) {
-        login(email, password);
-        toast.success(`Chào mừng trở lại, ${foundCustomer.name}!`);
-        navigate("/");
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      toast.success("Đăng nhập thành công!");
+
+      if (role === "ROLE_ADMIN") {
+        loginAdmin({ email: userEmail, role: "admin" });
+        navigate("/admin/dashboard");
+
+      } else if (role === "ROLE_MANAGER") {
+        loginAdmin({ email: userEmail, role: "manager" });
+        navigate("/manager/dashboard");
+
+      } else if (role === "ROLE_STAFF") {
+        loginAdmin({ email: userEmail, role: "staff" });
+        navigate("/staff/dashboard");
+
       } else {
-        toast.error("Email hoặc mật khẩu không đúng!");
+        // CUSTOMER
+        setUser({
+          id: "1",
+          email: userEmail,
+          name: userEmail.split("@")[0],
+          role,
+        });
+
+        navigate("/");
       }
+
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Đăng nhập thất bại!");
     }
   };
 
@@ -115,45 +94,121 @@ export default function LoginPage() {
     try {
       toast.info("Đang khởi tạo Google Sign-In...");
 
-      // Initialize Google Auth Service
       const googleAuth = GoogleAuthService.getInstance();
       await googleAuth.initialize();
 
-      // Get Google credential token
       const credential = await googleAuth.signIn();
-      console.log('Google credential received:', credential ? 'Yes' : 'No');
-      console.log('Credential length:', credential?.length || 0);
+
+      if (!credential) {
+        toast.error("Không nhận được Google credential");
+        return;
+      }
 
       toast.info("Đang xác thực với server...");
 
-      // Send token to backend
       const response = await api.loginWithGoogle(credential);
-      console.log('Backend response:', response);
 
-      // Handle successful login — backend returns BaseResponse<AuthResponse>
-      // with data: { accessToken, refreshToken, email, role }
-      if (response.data?.accessToken) {
-        login(response.data.email, ''); // Update context with user data
-        toast.success(`Chào mừng ${response.data.email}!`);
-        navigate("/");
-      } else {
-        console.log('Unexpected response structure:', response);
-        throw new Error('Invalid response from server');
+      console.log("FULL RESPONSE:", response);
+      console.log("DATA:", response.data);
+      const baseResponse = response;
+      const data = baseResponse.data;
+
+      if (!data?.accessToken) {
+        toast.error("Phản hồi server không hợp lệ");
+        return;
       }
-    } catch (error: any) {
-      console.error('Google login failed:', error);
 
-      if (error.message?.includes('popup')) {
-        toast.error('Vui lòng cho phép popup để đăng nhập với Google');
-      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        toast.error('Không thể kết nối tới server. Vui lòng thử lại sau.');
-      } else if (error.message?.includes('origin')) {
-        toast.error('Lỗi cấu hình Google OAuth. Liên hệ admin.');
+      const { accessToken, refreshToken, email, role } = data;
+
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      toast.success(`Chào mừng ${email}!`);
+
+      if (role === "ROLE_ADMIN") {
+        loginAdmin({ email, role: "admin" });
+        navigate("/admin/dashboard");
+
+      } else if (role === "ROLE_MANAGER") {
+        loginAdmin({ email, role: "manager" });
+        navigate("/manager/dashboard");
+
+      } else if (role === "ROLE_STAFF") {
+        loginAdmin({ email, role: "staff" });
+        navigate("/staff/dashboard");
+
       } else {
-        toast.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
+        login(email, "");
+        navigate("/");
+      }
+
+
+
+    } catch (error: any) {
+      console.error("Google login failed:", error);
+
+      if (error.message?.includes("popup")) {
+        toast.error("Vui lòng cho phép popup để đăng nhập với Google");
+      } else if (
+        error.message?.includes("network") ||
+        error.message?.includes("fetch")
+      ) {
+        toast.error("Không thể kết nối tới server. Vui lòng thử lại sau.");
+      } else if (error.message?.includes("origin")) {
+        toast.error("Lỗi cấu hình Google OAuth. Liên hệ admin.");
+      } else {
+        toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
       }
     }
   };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      await api.post("/api/v1/auth/register", {
+        username,
+        firstName,
+        lastName,
+        email,
+        phone,
+        password,
+      });
+
+      toast.success("Đăng ký thành công!");
+
+      const loginResponse = await api.post("/api/v1/auth/login", {
+        email,
+        password,
+      });
+
+      const data = loginResponse.data;
+
+      if (!data?.accessToken) {
+        toast.error("Không nhận được token sau khi đăng ký");
+        return;
+      }
+
+      const { accessToken, refreshToken, role, email: userEmail } = data;
+
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+
+      setUser({
+        id: "1",
+        email: userEmail,
+        name: userEmail.split("@")[0],
+        role,
+      });
+
+      navigate("/");
+
+    } catch (error) {
+      console.error("Register error:", error);
+      toast.error("Đăng ký thất bại!");
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#FFE5E3] via-white to-[#FFE5E3]">
@@ -270,7 +325,7 @@ export default function LoginPage() {
             </div>
 
             {/* Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <Input
                 icon={<Mail />}
                 type="email"
@@ -324,7 +379,7 @@ export default function LoginPage() {
                   Nguyễn Thị Lan – 1,500 điểm
                 </p>
               </div>
-            </div>            
+            </div>
           </div>
         </div>
 
@@ -382,7 +437,7 @@ export default function LoginPage() {
             </div>
 
             {/* Register Form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleRegister} className="space-y-3">
               <Input
                 icon={<User />}
                 placeholder="Tên người dùng"
