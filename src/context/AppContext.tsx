@@ -68,14 +68,23 @@ const MOCK_VOUCHERS: Voucher[] = [
 ];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+<<<<<<< HEAD
   const [user, _setUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem('user');
       return stored ? JSON.parse(stored) : null;
+=======
+  const [user, setUserState] = useState<User | null>(() => {
+    // Restore user from localStorage on app init
+    try {
+      const savedUser = localStorage.getItem("user");
+      return savedUser ? JSON.parse(savedUser) : null;
+>>>>>>> feat/wishlist-api
     } catch {
       return null;
     }
   });
+<<<<<<< HEAD
 
   const setUser = (newUser: User | null) => {
     _setUser(newUser);
@@ -99,7 +108,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
+=======
+  const [cart, setCart] = useState<CartItem[]>([]);
+>>>>>>> feat/wishlist-api
   const [voucher, setVoucher] = useState<Voucher | null>(null);
+
+  // Wrapper to persist user to localStorage
+  const setUser = (newUser: User | null) => {
+    setUserState(newUser);
+    if (newUser) {
+      localStorage.setItem("user", JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem("user");
+    }
+  };
 
   const login = (email: string, password: string) => {
     // Check against demo customers
@@ -140,6 +162,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     setCart([]);
     setVoucher(null);
     localStorage.removeItem("accessToken");

@@ -337,10 +337,35 @@ export default function ProductDetail() {
             {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
           </button>
 
+          {/* Add to Wishlist Button */}
+          <button
+            onClick={async () => {
+              try {
+                await api.addWishlist(product.id);
+                toast.success("❤️ Đã thêm vào yêu thích", {
+                  description: product.name,
+                  duration: 2000,
+                });
+              } catch (error: any) {
+                if (error.status === 400) {
+                  toast.info("Sản phẩm đã có trong danh sách yêu thích", {
+                    duration: 2000,
+                  });
+                } else {
+                  toast.error("Không thể thêm vào yêu thích");
+                }
+              }
+            }}
+            className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg"
+          >
+            <Heart className="size-6" />
+            Thêm vào yêu thích
+          </button>
+
           {/* Find in Store Button */}
           <button
             onClick={() => setShowStoreModal(true)}
-            className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg"
+            className="w-full mt-4 bg-white border-2 border-gray-300 text-gray-700 py-4 rounded-2xl hover:bg-gray-100 transition-all flex items-center justify-center gap-3 font-bold text-lg"
           >
             <MapPin className="size-6" />
             Tìm tại cửa hàng

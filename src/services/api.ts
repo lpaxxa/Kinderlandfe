@@ -100,7 +100,16 @@ export const api = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch {
+          // response body is not JSON, keep default message
+        }
+        const err = new Error(errorMsg);
+        (err as any).status = response.status;
+        throw err;
       }
 
       return await response.json();
@@ -187,6 +196,29 @@ export const api = {
       return await response.json();
     } catch (error) {
       console.error("API PUT error:", error);
+      throw error;
+    }
+  },
+
+  delete: async (endpoint: string) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("API DELETE error:", error);
       throw error;
     }
   },
