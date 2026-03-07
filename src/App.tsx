@@ -20,6 +20,7 @@ import Checkout from './components/checkout/Checkout';
 import Payment from './components/checkout/Payment';
 import OrderSuccess from './components/checkout/OrderSuccess';
 
+
 // Admin & Staff
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -42,6 +43,7 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 import OrderHistory from './components/customer/OrderHistory';
 import CustomerProfile from './components/customer/CustomerProfile';
 import LoyaltyPoints from './components/customer/LoyaltyPoints';
+import Wishlist from './components/pages/Wishlist';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
@@ -50,11 +52,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'staff' | 'manager')[] }) {
   const { adminUser } = useAdmin();
-  
+
   if (!adminUser) {
     return <Navigate to="/admin/login" />;
   }
-  
+
   if (!allowedRoles.includes(adminUser.role)) {
     if (adminUser.role === 'admin') {
       return <Navigate to="/admin/dashboard" />;
@@ -64,7 +66,7 @@ function AdminProtectedRoute({ children, allowedRoles }: { children: React.React
       return <Navigate to="/staff/dashboard" />;
     }
   }
-  
+
   return <>{children}</>;
 }
 
@@ -77,10 +79,10 @@ function AppContent() {
         <Routes>
           {/* Customer Routes */}
           <Route path="/login" element={<LoginPage />} />
-          
+
           {/* Admin/Staff/Manager Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
@@ -130,7 +132,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Manager Routes */}
           <Route
             path="/manager/dashboard"
@@ -292,7 +294,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Staff Routes */}
           <Route
             path="/staff/dashboard"
@@ -358,7 +360,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Customer Site Routes */}
           <Route
             path="/*"
@@ -433,6 +435,14 @@ function AppContent() {
                     element={
                       <ProtectedRoute>
                         <LoyaltyPoints />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account/wishlist"
+                    element={
+                      <ProtectedRoute>
+                        <Wishlist />
                       </ProtectedRoute>
                     }
                   />

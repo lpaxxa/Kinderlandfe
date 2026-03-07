@@ -1,21 +1,74 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { products } from '../../data/products';
 import { stores } from '../../data/stores';
 import { useApp } from '../../context/AppContext';
 import { ShoppingCart, Heart, Share2, Star, Truck, Shield, RefreshCw, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { useEffect } from "react";
+import api from "../../services/api";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useApp();
-  
-  const product = products.find((p) => p.id === id);
+
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [selectedType, setSelectedType] = useState(product?.types?.[0] || '');
   const [showStoreModal, setShowStoreModal] = useState(false);
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await api.get(`/api/v1/products/view-detail/${id}`);
+
+        console.log("API PRODUCT:", response.data);
+
+        const data = response.data;
+
+        const discountPercent = data.promotion?.discountPercent || 0;
+
+        const originalPrice = data.minPrice;
+
+        const finalPrice =
+          discountPercent > 0
+            ? originalPrice - (originalPrice * discountPercent) / 100
+            : originalPrice;
+
+        const mappedProduct = {
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          image: data.imageUrl,
+          category: data.categoryName,
+          brand: data.brandName,
+
+          price: finalPrice,
+          originalPrice: discountPercent > 0 ? originalPrice : null,
+          discount: discountPercent,
+
+          stock: 100,
+        };
+
+        setProduct(mappedProduct);
+      } catch (error) {
+        console.error("Lỗi lấy product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <p>Đang tải sản phẩm...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -34,13 +87,13 @@ export default function ProductDetail() {
 
   // Check store availability
   const storesWithStock = stores.filter(store => {
-    const stock = store.inventory[product.id];
+    const stock = store.inventory[String(product.id)];
     return stock !== undefined && stock > 0;
   });
 
   const handleAddToCart = () => {
     // Guest có thể thêm vào giỏ hàng, không cần đăng nhập
-    addToCart(product, quantity, product.types ? selectedType : undefined);
+    addToCart(product, quantity);
     toast.success('✅ Thêm vào giỏ hàng thành công!', {
       description: `${quantity} x ${product.name}`,
       duration: 2000,
@@ -111,29 +164,6 @@ export default function ProductDetail() {
           ) : (
             <div className="text-4xl font-bold text-[#AF140B] mb-6">
               {formatPrice(product.price)}
-            </div>
-          )}
-
-          {product.types && product.types.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 mb-3">
-                Chọn loại:
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {product.types.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedType(type)}
-                    className={`px-5 py-3 rounded-xl border-2 transition-all font-semibold ${
-                      selectedType === type
-                        ? 'border-[#AF140B] bg-[#AF140B] text-white shadow-lg'
-                        : 'border-gray-300 hover:border-[#AF140B] hover:bg-[#FFE5E3] bg-white'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
@@ -211,7 +241,7 @@ export default function ProductDetail() {
           <MapPin className="size-5 text-[#AF140B]" />
           <h3 className="font-bold text-gray-800">Tình Trạng Tại Cửa Hàng</h3>
         </div>
-        
+
         {storesWithStock.length > 0 ? (
           <div className="space-y-3">
             {storesWithStock.slice(0, 3).map((store) => (
@@ -224,12 +254,12 @@ export default function ProductDetail() {
                     <p className="text-sm text-gray-600 line-clamp-1">{store.district}</p>
                   </div>
                   <span className="text-[#AF140B] font-bold text-sm whitespace-nowrap">
-                    Còn {store.inventory[product.id]} sp
+                    Còn {store.inventory[String(product.id)]} sp
                   </span>
                 </div>
               </div>
             ))}
-            
+
             <Link
               to="/stores"
               className="flex items-center justify-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm py-2"

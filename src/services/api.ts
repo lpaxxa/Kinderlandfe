@@ -34,7 +34,7 @@ export const api = {
       throw error;
     }
   },
-  
+
 
   /**
    * Login with Google
@@ -80,16 +80,46 @@ export const api = {
     }
   },
 
+  addWishlist: async (productId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/wishlist/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: productId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Wishlist API error:", error);
+      throw error;
+    }
+  },
+
+
   /**
    * Generic GET request
    * @param endpoint - API endpoint (without base URL)
    */
   get: async (endpoint: string) => {
     try {
+      const token = localStorage.getItem("accessToken");
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
 
@@ -111,10 +141,13 @@ export const api = {
    */
   post: async (endpoint: string, data: any) => {
     try {
+      const token = localStorage.getItem("accessToken");
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify(data),
       });
@@ -129,6 +162,31 @@ export const api = {
       throw error;
     }
   },
+
+  put: async (endpoint: string, data: any) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("API PUT error:", error);
+      throw error;
+    }
+  },
+
 };
 
 export default api;
