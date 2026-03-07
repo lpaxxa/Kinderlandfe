@@ -8,9 +8,23 @@ export default function Wishlist() {
   const fetchWishlist = async () => {
     try {
       const res = await api.get("/api/v1/wishlist");
+      console.log("fetchWishlist response:", res);
+      
+      let items = res;
+      if (res && res.data) {
+        items = res.data;
+      } else if (res && res.items) {
+        items = res.items;
+      }
 
-      setWishlist(res.data);
-
+      if (Array.isArray(items)) {
+        setWishlist(items);
+      } else if (items && Array.isArray(items.items)) {
+        setWishlist(items.items);
+      } else {
+        console.warn("Expected array but got:", items);
+        setWishlist([]);
+      }
     } catch (error) {
       console.error(error);
     }

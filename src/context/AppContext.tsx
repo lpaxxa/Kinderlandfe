@@ -68,8 +68,37 @@ const MOCK_VOUCHERS: Voucher[] = [
 ];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [user, _setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const setUser = (newUser: User | null) => {
+    _setUser(newUser);
+    if (newUser) {
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('user');
+    }
+  };
+
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('cart');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
   const [voucher, setVoucher] = useState<Voucher | null>(null);
 
   const login = (email: string, password: string) => {
@@ -113,6 +142,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setCart([]);
     setVoucher(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   };
 
   const addToCart = (product: Product, quantity: number, type?: string) => {

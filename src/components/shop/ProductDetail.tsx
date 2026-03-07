@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { stores } from '../../data/stores';
 import { useApp } from '../../context/AppContext';
 import { ShoppingCart, Heart, Share2, Star, Truck, Shield, RefreshCw, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
@@ -12,11 +11,17 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useApp();
-
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showStoreModal, setShowStoreModal] = useState(false);
+
+  const [skus, setSkus] = useState<any[]>([]);
+  const [selectedSku, setSelectedSku] = useState<any>(null);
+  
+  const [stores, setStores] = useState<any[]>([]);
+  const [inventories, setInventories] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -59,8 +64,83 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
+
+    // Fetch stores & inventory
+    const fetchStoresAndInventory = async () => {
+      try {
+        const storesRes = await api.get("/api/v1/stores");
+        setStores(storesRes.data || []);
+        
+        // Temporarily fake inventory since backend returns 401
+        const mockInventories = storesRes.data?.map((store: any) => ({
+             storeId: store.id,
+             skuId: selectedSku?.id || 1, // Fallback to 1 if no selected sku yet
+             quantity: Math.floor(Math.random() * 50) + 1 
+        })) || [];
+        
+        setInventories(mockInventories);
+      } catch (error) {
+        console.error("Lỗi lấy stores:", error);
+      }
+    };
+    fetchStoresAndInventory();
   }, [id]);
 
+  useEffect(() => {
+    if (!product) return;
+
+    const fetchSkus = async () => {
+      try {
+        const res = await api.get("/api/v1/sku");
+
+        const productSkus = res.data.filter(
+          (sku: any) => sku.productId === product.id
+        );
+
+        setSkus(productSkus);
+
+        if (productSkus.length > 0) {
+          setSelectedSku(productSkus[0]);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchSkus();
+  }, [product]);
+
+  // Temporarily fake inventory since backend returns 401
+  useEffect(() => {
+    if (stores.length > 0 && selectedSku) {
+      // Fix random seed based on store + sku to keep data consistent between renders
+      const mockInventories = stores.map((store: any) => {
+        let seed = store.id * 100 + selectedSku.id;
+        // Simple pseudo-random using seed to always return same stock for a SKU in a store
+        const x = Math.sin(seed++) * 10000;
+        const randomStock = Math.floor((x - Math.floor(x)) * 50) + 0; 
+        
+        return {
+          storeId: store.id,
+          skuId: selectedSku.id,
+          quantity: randomStock
+        };
+      });
+      setInventories(mockInventories);
+    }
+  }, [stores, selectedSku]);
+
+  // Derived values for stock must be calculated before hooks if we rely on them inside hooks
+  const selectedSkuInventory = inventories.filter((inv: any) => inv.skuId === selectedSku?.id);
+  const totalSkuStock = selectedSkuInventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0);
+  const currentStock = selectedSku ? totalSkuStock : (product ? product.stock : 0);
+
+  // Prevent ordering more than available stock when SKU changes
+  useEffect(() => {
+    if (quantity > currentStock) {
+      setQuantity(currentStock > 0 ? 1 : 0);
+    }
+  }, [currentStock]);
 
   if (loading) {
     return (
@@ -85,15 +165,28 @@ export default function ProductDetail() {
     }).format(price);
   };
 
+  // Get inventory for a specific store and sku
+  const getStoreSkuQuantity = (storeId: number) => {
+    if (!selectedSku) return 0;
+    const inv = inventories.find(
+      (i: any) => i.storeId === storeId && i.skuId === selectedSku.id
+    );
+    return inv ? inv.quantity : 0;
+  };
+
   // Check store availability
-  const storesWithStock = stores.filter(store => {
-    const stock = store.inventory[String(product.id)];
-    return stock !== undefined && stock > 0;
+  const storesWithStock = stores.filter((store) => {
+    return getStoreSkuQuantity(store.id) > 0;
   });
 
   const handleAddToCart = () => {
     // Guest có thể thêm vào giỏ hàng, không cần đăng nhập
-    addToCart(product, quantity);
+    addToCart(
+      selectedSku
+        ? { ...product, skuId: selectedSku.id, price: selectedSku.price }
+        : product,
+      quantity
+    );
     toast.success('✅ Thêm vào giỏ hàng thành công!', {
       description: `${quantity} x ${product.name}`,
       duration: 2000,
@@ -106,7 +199,7 @@ export default function ProductDetail() {
   };
 
   const increaseQuantity = () => {
-    if (quantity < product.stock) setQuantity(quantity + 1);
+    if (quantity < currentStock) setQuantity(quantity + 1);
   };
 
   return (
@@ -145,13 +238,16 @@ export default function ProductDetail() {
             </span>
           </div>
 
+
           <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.description}</p>
 
           {product.discount ? (
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-4xl font-bold text-[#AF140B]">
-                  {formatPrice(product.price)}
+                  {selectedSku
+                    ? formatPrice(selectedSku.price)
+                    : formatPrice(product.price)}
                 </span>
                 <span className="bg-red-500 text-white px-3 py-1 rounded-full font-bold">
                   Giảm {product.discount}%
@@ -160,12 +256,50 @@ export default function ProductDetail() {
               <span className="text-lg text-gray-400 line-through">
                 Giá gốc: {formatPrice(product.originalPrice || 0)}
               </span>
+
+              {selectedSku && (
+                <div className="text-sm text-gray-500 mt-2">
+                  Size: {selectedSku.size} | Color: {selectedSku.color}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="text-4xl font-bold text-[#AF140B] mb-6">
-              {formatPrice(product.price)}
-            </div>
+            <>
+              <div className="text-4xl font-bold text-[#AF140B] mb-2">
+                {selectedSku
+                  ? formatPrice(selectedSku.price)
+                  : formatPrice(product.price)}
+              </div>
+
+              {selectedSku && (
+                <div className="text-sm text-gray-500 mb-4">
+                  Size: {selectedSku.size} | Color: {selectedSku.color}
+                </div>
+              )}
+            </>
           )}
+
+          <div className="mt-4">
+            <p className="font-semibold mb-2">Chọn loại:</p>
+
+            <div className="flex flex-wrap gap-2">
+
+              {skus.map((sku: any) => (
+                <button
+                  key={sku.id}
+                  onClick={() => setSelectedSku(sku)}
+                  className={`px-4 py-2 border rounded-lg text-sm transition
+        ${selectedSku?.id === sku.id
+                      ? "bg-[#AF140B] text-white border-[#AF140B]"
+                      : "bg-white hover:bg-gray-100"
+                    }`}
+                >
+                  {sku.skuCode}
+                </button>
+              ))}
+
+            </div>
+          </div>
 
           <div className="mb-6">
             <label className="block text-sm font-bold text-gray-700 mb-3">
@@ -183,23 +317,24 @@ export default function ProductDetail() {
               </span>
               <button
                 onClick={increaseQuantity}
-                className="p-3 border-2 border-gray-300 rounded-xl hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all"
-                disabled={quantity >= product.stock}
+                className="p-3 border-2 border-gray-300 rounded-xl hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all disabled:opacity-50"
+                disabled={quantity >= currentStock || currentStock === 0}
               >
                 <Plus className="size-5" />
               </button>
             </div>
             <p className="text-sm text-gray-500 mt-2 font-medium">
-              Còn lại: {product.stock} sản phẩm
+              Còn lại: {currentStock} sản phẩm
             </p>
           </div>
 
           <button
             onClick={handleAddToCart}
-            className="w-full bg-gradient-to-r from-[#AF140B] to-[#D91810] text-white py-4 rounded-2xl hover:from-[#8D0F08] hover:to-[#AF140B] transition-all shadow-xl flex items-center justify-center gap-3 font-bold text-lg"
+            disabled={currentStock === 0}
+            className="w-full bg-gradient-to-r from-[#AF140B] to-[#D91810] text-white py-4 rounded-2xl hover:from-[#8D0F08] hover:to-[#AF140B] transition-all shadow-xl flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
           >
             <ShoppingCart className="size-6" />
-            Thêm vào giỏ hàng
+            {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
           </button>
 
           {/* Find in Store Button */}
@@ -249,12 +384,12 @@ export default function ProductDetail() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 line-clamp-1">
-                      {store.name.replace('Kinderland ', '')}
+                      {store.name}
                     </p>
-                    <p className="text-sm text-gray-600 line-clamp-1">{store.district}</p>
+                    <p className="text-sm text-gray-600 line-clamp-1">{store.address}</p>
                   </div>
                   <span className="text-[#AF140B] font-bold text-sm whitespace-nowrap">
-                    Còn {store.inventory[String(product.id)]} sp
+                    Còn {getStoreSkuQuantity(store.id)} sp
                   </span>
                 </div>
               </div>

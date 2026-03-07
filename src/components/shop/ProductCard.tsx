@@ -65,10 +65,10 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
                 duration: 2000,
               });
 
-            } catch (error) {
+            } catch (error: any) {
               console.error(error);
 
-              toast.error("Không thể thêm vào wishlist");
+              toast.error(error.message || "Không thể thêm vào wishlist");
             }
           }}
           className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full hover:bg-[#FFE5E3] hover:scale-110 transition-all shadow-md"

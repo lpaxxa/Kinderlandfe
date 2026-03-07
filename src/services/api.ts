@@ -83,6 +83,10 @@ export const api = {
   addWishlist: async (productId: number) => {
     try {
       const token = localStorage.getItem("accessToken");
+      
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để sử dụng tính năng này");
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/v1/wishlist/items`, {
         method: "POST",
