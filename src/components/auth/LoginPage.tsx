@@ -39,10 +39,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const response = await api.post("/api/v1/auth/login", {
-        email,
-        password,
-      });
+      const response = await api.loginWithEmail(email, password);
       console.log("FULL RESPONSE:", response);
       console.log("DATA:", response.data);
       const data = response.data;
@@ -166,7 +163,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      await api.post("/api/v1/auth/register", {
+      await api.register({
         username,
         firstName,
         lastName,
@@ -177,10 +174,7 @@ export default function LoginPage() {
 
       toast.success("Đăng ký thành công!");
 
-      const loginResponse = await api.post("/api/v1/auth/login", {
-        email,
-        password,
-      });
+      const loginResponse = await api.loginWithEmail(email, password);
 
       const data = loginResponse.data;
 

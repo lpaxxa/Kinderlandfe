@@ -5275,8 +5275,8 @@
   --font-size: 16px;
   --background: #fff;
   --foreground: #4a4a4a;
-  --card: #af140b;
-  --card-foreground: #fff;
+  --card: #fff;
+  --card-foreground: #4a4a4a;
   --popover: #fff;
   --popover-foreground: #4a4a4a;
   --primary: #af140b;

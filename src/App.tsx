@@ -23,6 +23,7 @@ import OrderSuccess from './components/checkout/OrderSuccess';
 // Admin & Staff
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
+import AdminLayout from './components/admin/AdminLayout';
 import ProductManagement from './components/admin/ProductManagement';
 import OrderManagement from './components/admin/OrderManagement';
 import PromotionManagement from './components/admin/PromotionManagement';
@@ -36,6 +37,15 @@ import DefectiveReport from './components/staff/DefectiveReport';
 
 // Manager
 import ManagerDashboard from './components/manager/ManagerDashboard';
+import ManagerLayout from './components/manager/ManagerLayout';
+import FinancialOverview from './components/manager/FinancialOverview';
+import SkuPriceManagement from './components/manager/SkuPriceManagement';
+import ReviewManagement from './components/manager/ReviewManagement';
+import ImportOrderPage from './components/manager/ImportOrderPage';
+import InventoryManagementPage from './components/manager/InventoryManagementPage';
+import StockTransferPage from './components/manager/StockTransferPage';
+import PhysicalCountPage from './components/manager/PhysicalCountPage';
+import DefectiveReportPage from './components/manager/DefectiveReportPage';
 
 // Customer Account
 import CustomerDashboard from './components/customer/CustomerDashboard';
@@ -50,11 +60,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'staff' | 'manager')[] }) {
   const { adminUser } = useAdmin();
-  
+
   if (!adminUser) {
     return <Navigate to="/admin/login" />;
   }
-  
+
   if (!allowedRoles.includes(adminUser.role)) {
     if (adminUser.role === 'admin') {
       return <Navigate to="/admin/dashboard" />;
@@ -64,7 +74,7 @@ function AdminProtectedRoute({ children, allowedRoles }: { children: React.React
       return <Navigate to="/staff/dashboard" />;
     }
   }
-  
+
   return <>{children}</>;
 }
 
@@ -77,222 +87,59 @@ function AppContent() {
         <Routes>
           {/* Customer Routes */}
           <Route path="/login" element={<LoginPage />} />
-          
+
           {/* Admin/Staff/Manager Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
-          {/* Admin Routes */}
+
+          {/* Admin Routes - wrapped in AdminLayout for persistent sidebar */}
           <Route
-            path="/admin/dashboard"
+            path="/admin"
             element={
               <AdminProtectedRoute allowedRoles={['admin']}>
-                <AdminDashboard />
+                <AdminLayout />
               </AdminProtectedRoute>
             }
-          />
+          >
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="products" element={<ProductManagement />} />
+            <Route path="orders" element={<OrderManagement />} />
+            <Route path="promotions" element={<PromotionManagement />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="returns" element={<ReturnManagement />} />
+          </Route>
+
+          {/* Manager Routes - wrapped in ManagerLayout for persistent sidebar */}
           <Route
-            path="/admin/products"
-            element={
-              <AdminProtectedRoute allowedRoles={['admin']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/orders"
-            element={
-              <AdminProtectedRoute allowedRoles={['admin']}>
-                <OrderManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/promotions"
-            element={
-              <AdminProtectedRoute allowedRoles={['admin']}>
-                <PromotionManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <AdminProtectedRoute allowedRoles={['admin']}>
-                <UserManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/returns"
-            element={
-              <AdminProtectedRoute allowedRoles={['admin']}>
-                <ReturnManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          
-          {/* Manager Routes */}
-          <Route
-            path="/manager/dashboard"
+            path="/manager"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <ManagerDashboard />
+                <ManagerLayout />
               </AdminProtectedRoute>
             }
-          />
-          <Route
-            path="/manager/products"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/categories"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/inventory"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/storage"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/orders"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <OrderManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/create-order"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <OrderManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/returns"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ReturnManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/stock-transfer"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <StoreTransfer />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/import-orders"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <StoreTransfer />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/import-management"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <StoreTransfer />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/defective-report"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <DefectiveReport />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/physical-count"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/promotions"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <PromotionManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/blog"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/policies"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/reviews"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/reports"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <AdminDashboard />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/financial"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <AdminDashboard />
-              </AdminProtectedRoute>
-            }
-          />
-          <Route
-            path="/manager/change-password"
-            element={
-              <AdminProtectedRoute allowedRoles={['manager']}>
-                <CustomerProfile />
-              </AdminProtectedRoute>
-            }
-          />
-          
+          >
+            <Route path="dashboard" element={<ManagerDashboard />} />
+            <Route path="products" element={<ProductManagement />} />
+            <Route path="categories" element={<ProductManagement />} />
+            <Route path="inventory" element={<InventoryManagementPage />} />
+            <Route path="storage" element={<InventoryManagementPage />} />
+            <Route path="orders" element={<OrderManagement />} />
+            <Route path="create-order" element={<OrderManagement />} />
+            <Route path="returns" element={<ReturnManagement />} />
+            <Route path="stock-transfer" element={<StockTransferPage />} />
+            <Route path="import-orders" element={<ImportOrderPage />} />
+            <Route path="import-management" element={<StoreTransfer />} />
+            <Route path="defective-report" element={<DefectiveReportPage />} />
+            <Route path="physical-count" element={<PhysicalCountPage />} />
+            <Route path="promotions" element={<PromotionManagement />} />
+            <Route path="blog" element={<ProductManagement />} />
+            <Route path="policies" element={<ProductManagement />} />
+            <Route path="reviews" element={<ReviewManagement />} />
+            <Route path="reports" element={<AdminDashboard />} />
+            <Route path="financial" element={<FinancialOverview />} />
+            <Route path="sku-price" element={<SkuPriceManagement />} />
+            <Route path="change-password" element={<CustomerProfile />} />
+          </Route>
+
           {/* Staff Routes */}
           <Route
             path="/staff/dashboard"
@@ -358,7 +205,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Customer Site Routes */}
           <Route
             path="/*"

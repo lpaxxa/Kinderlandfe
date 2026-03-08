@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { products } from '../../data/products';
-import { stores } from '../../data/stores';
 import { useApp } from '../../context/AppContext';
 import { ShoppingCart, Heart, Share2, Star, Truck, Shield, RefreshCw, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
@@ -11,7 +10,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useApp();
-  
+
   const product = products.find((p) => p.id === id);
   const [quantity, setQuantity] = useState(1);
   const [selectedType, setSelectedType] = useState(product?.types?.[0] || '');
@@ -32,11 +31,7 @@ export default function ProductDetail() {
     }).format(price);
   };
 
-  // Check store availability
-  const storesWithStock = stores.filter(store => {
-    const stock = store.inventory[product.id];
-    return stock !== undefined && stock > 0;
-  });
+  // Availability được hiển thị qua StoreAvailabilityModal gọi API trực tiếp
 
   const handleAddToCart = () => {
     // Guest có thể thêm vào giỏ hàng, không cần đăng nhập
@@ -124,11 +119,10 @@ export default function ProductDetail() {
                   <button
                     key={type}
                     onClick={() => setSelectedType(type)}
-                    className={`px-5 py-3 rounded-xl border-2 transition-all font-semibold ${
-                      selectedType === type
-                        ? 'border-[#AF140B] bg-[#AF140B] text-white shadow-lg'
-                        : 'border-gray-300 hover:border-[#AF140B] hover:bg-[#FFE5E3] bg-white'
-                    }`}
+                    className={`px-5 py-3 rounded-xl border-2 transition-all font-semibold ${selectedType === type
+                      ? 'border-[#AF140B] bg-[#AF140B] text-white shadow-lg'
+                      : 'border-gray-300 hover:border-[#AF140B] hover:bg-[#FFE5E3] bg-white'
+                      }`}
                   >
                     {type}
                   </button>
@@ -211,38 +205,16 @@ export default function ProductDetail() {
           <MapPin className="size-5 text-[#AF140B]" />
           <h3 className="font-bold text-gray-800">Tình Trạng Tại Cửa Hàng</h3>
         </div>
-        
-        {storesWithStock.length > 0 ? (
-          <div className="space-y-3">
-            {storesWithStock.slice(0, 3).map((store) => (
-              <div key={store.id} className="p-3 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 line-clamp-1">
-                      {store.name.replace('Kinderland ', '')}
-                    </p>
-                    <p className="text-sm text-gray-600 line-clamp-1">{store.district}</p>
-                  </div>
-                  <span className="text-[#AF140B] font-bold text-sm whitespace-nowrap">
-                    Còn {store.inventory[product.id]} sp
-                  </span>
-                </div>
-              </div>
-            ))}
-            
-            <Link
-              to="/stores"
-              className="flex items-center justify-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm py-2"
-            >
-              Xem tất cả {storesWithStock.length} cửa hàng
-              <ChevronRight className="size-4" />
-            </Link>
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">
-            Sản phẩm này hiện không có tại cửa hàng. Vui lòng đặt hàng online.
-          </p>
-        )}
+        <p className="text-gray-600 text-sm mb-4">
+          Kiểm tra sản phẩm này có sẵn tại cửa hàng Kinderland gần bạn không.
+        </p>
+        <button
+          onClick={() => setShowStoreModal(true)}
+          className="flex items-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm"
+        >
+          <MapPin className="size-4" />
+          Xem tình trạng tại cửa hàng →
+        </button>
       </div>
 
       {/* Features */}

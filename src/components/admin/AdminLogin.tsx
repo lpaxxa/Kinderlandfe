@@ -6,7 +6,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { toast } from 'sonner';
-import { Package, ShieldCheck } from 'lucide-react';
+import { Package, ShieldCheck, Loader2 } from 'lucide-react';
+import api from '../../services/api';
 
 export type UserRole = 'admin' | 'staff' | 'manager';
 
@@ -15,59 +16,9 @@ export interface AdminUser {
   email: string;
   name: string;
   role: UserRole;
-  storeId?: string; // For staff/manager members
+  storeId?: string;
   storeName?: string;
 }
-
-// Mock users for demo
-const MOCK_USERS: { email: string; password: string; user: AdminUser }[] = [
-  {
-    email: 'admin@kinderland.vn',
-    password: 'admin123',
-    user: {
-      id: 'admin-1',
-      email: 'admin@kinderland.vn',
-      name: 'Nguyễn Văn Admin',
-      role: 'admin',
-    },
-  },
-  {
-    email: 'manager@kinderland.vn',
-    password: 'manager123',
-    user: {
-      id: 'manager-1',
-      email: 'manager@kinderland.vn',
-      name: 'Trần Thị Quản Lý',
-      role: 'manager',
-      storeId: 'store-1',
-      storeName: 'Kinderland Vincom Center Đồng Khởi',
-    },
-  },
-  {
-    email: 'staff1@kinderland.vn',
-    password: 'staff123',
-    user: {
-      id: 'staff-1',
-      email: 'staff1@kinderland.vn',
-      name: 'Trần Thị Nhân Viên',
-      role: 'staff',
-      storeId: 'store-1',
-      storeName: 'Kinderland Vincom Center Đồng Khởi',
-    },
-  },
-  {
-    email: 'staff2@kinderland.vn',
-    password: 'staff123',
-    user: {
-      id: 'staff-2',
-      email: 'staff2@kinderland.vn',
-      name: 'Lê Văn Thành',
-      role: 'staff',
-      storeId: 'store-6',
-      storeName: 'Kinderland Royal City Hà Nội',
-    },
-  },
-];
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -76,31 +27,50 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock login check
-    setTimeout(() => {
-      const found = MOCK_USERS.find(
-        (u) => u.email === email && u.password === password
-      );
+    try {
+      const response = await api.post('/api/v1/auth/login', { email, password });
+      const data = response.data;
 
-      if (found) {
-        toast.success(`Đăng nhập thành công! Xin chào ${found.user.name}`);
-        loginAdmin(found.user);
-        if (found.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (found.user.role === 'manager') {
-          navigate('/manager/dashboard');
-        } else {
-          navigate('/staff/dashboard');
-        }
-      } else {
-        toast.error('Email hoặc mật khẩu không đúng!');
+      if (!data?.accessToken) {
+        toast.error('Không nhận được token từ server!');
+        return;
       }
+
+      // DEBUG: xem BE trả những field gì
+      console.log('[AdminLogin] login data fields:', Object.keys(data), data);
+
+      const { accessToken, refreshToken, role, email: userEmail, storeId } = data;
+
+      // Lưu token để các API call sau dùng
+      localStorage.setItem('accessToken', accessToken);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      // Lưu storeId riêng để các API inventory dùng
+      if (storeId) localStorage.setItem('storeId', String(storeId));
+
+      toast.success('Đăng nhập thành công!');
+
+      if (role === 'ROLE_ADMIN') {
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'admin', storeId: storeId ? String(storeId) : undefined });
+        navigate('/admin/dashboard');
+      } else if (role === 'ROLE_MANAGER') {
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'manager', storeId: storeId ? String(storeId) : undefined });
+        navigate('/manager/dashboard');
+      } else if (role === 'ROLE_STAFF') {
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'staff', storeId: storeId ? String(storeId) : undefined });
+        navigate('/staff/dashboard');
+      } else {
+        toast.error(`Role không được hỗ trợ: ${role}`);
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast.error('Email hoặc mật khẩu không đúng!');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -160,7 +130,9 @@ export default function AdminLogin() {
                 className="w-full bg-gray-900 hover:bg-gray-800 text-white"
                 disabled={isLoading}
               >
-                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                {isLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang đăng nhập...</>
+                ) : 'Đăng nhập'}
               </Button>
             </form>
 

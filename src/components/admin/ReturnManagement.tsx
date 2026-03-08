@@ -326,7 +326,7 @@ export default function ReturnManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-white">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -347,7 +347,7 @@ export default function ReturnManagement() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="border border-gray-200">
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -362,7 +362,7 @@ export default function ReturnManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border border-gray-200">
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -377,7 +377,7 @@ export default function ReturnManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border border-gray-200">
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -392,7 +392,7 @@ export default function ReturnManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border border-gray-200">
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -410,7 +410,7 @@ export default function ReturnManagement() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6 border border-gray-200">
+        <Card className="mb-6 bg-white border border-gray-200">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -444,7 +444,7 @@ export default function ReturnManagement() {
         {/* Returns List */}
         <div className="space-y-4">
           {filteredReturns.map((ret) => (
-            <Card key={ret.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+            <Card key={ret.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-4 flex-1">

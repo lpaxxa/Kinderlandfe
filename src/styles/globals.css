@@ -12,8 +12,8 @@
   --foreground: #4A4A4A;
   
   /* Primary - Bright Red */
-  --card: #AF140B;
-  --card-foreground: #FFFFFF;
+  --card: #FFFFFF;
+  --card-foreground: #4A4A4A;
   
   /* Popover */
   --popover: #FFFFFF;
