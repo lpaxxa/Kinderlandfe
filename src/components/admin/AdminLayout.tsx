@@ -23,29 +23,11 @@ export default function AdminLayout() {
   // Sidebar navigation items
   const sidebarItems = [
     {
-      section: 'Admin',
-      items: [
-        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
-      ]
-    },
-    {
-      section: 'Tổng quan',
-      items: [
-        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
-      ]
-    },
-    {
       section: 'Sản phẩm & Danh mục',
       items: [
         { title: 'Quản lý Sản phẩm', icon: Package, path: '/admin/products' },
         { title: 'Quản lý Danh mục', icon: Package, path: '/admin/categories' },
-      ]
-    },
-    {
-      section: 'Đơn hàng',
-      items: [
-        { title: 'Quản lý Đơn hàng', icon: ShoppingCart, path: '/admin/orders' },
-        { title: 'Xử lý Hoàn trả', icon: ClipboardList, path: '/admin/returns' },
+        { title: 'Quản lý Thương hiệu', icon: Package, path: '/admin/brands' },
       ]
     },
     {
@@ -58,27 +40,18 @@ export default function AdminLayout() {
       ]
     },
     {
-      section: 'Người dùng & Phân quyền',
+      section: 'Tài khoản',
       items: [
-        { title: 'Quản lý Người dùng', icon: Users, path: '/admin/users' },
-        { title: 'Quản lý Phân quyền', icon: Shield, path: '/admin/permissions' },
-        { title: 'Thêm Quyền cho Role', icon: UserPlus, path: '/admin/role-permissions' },
+        { title: 'Quản lý Tài khoản', icon: Users, path: '/admin/users' },
       ]
     },
     {
       section: 'Báo cáo & Tài chính',
       items: [
-        { title: 'Dashboard Tổng quan', icon: Activity, path: '/admin/overview' },
+        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
         { title: 'Báo cáo Chi tiết', icon: BarChart3, path: '/admin/reports' },
         { title: 'Quản lý Tài chính', icon: DollarSign, path: '/admin/financial' },
         { title: 'Tồn kho', icon: Store, path: '/admin/inventory' },
-      ]
-    },
-    {
-      section: 'Cài đặt',
-      items: [
-        { title: 'Đổi Mật khẩu', icon: LockKeyhole, path: '/admin/change-password' },
-        { title: 'Cài đặt Hệ thống', icon: Settings, path: '/admin/settings' },
       ]
     },
   ];
