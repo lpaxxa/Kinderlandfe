@@ -218,7 +218,7 @@ export default function OrderManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-white">
       {/* Header */}
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -239,7 +239,7 @@ export default function OrderManagement() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -250,7 +250,7 @@ export default function OrderManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -261,7 +261,7 @@ export default function OrderManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -272,7 +272,7 @@ export default function OrderManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -283,7 +283,7 @@ export default function OrderManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -297,7 +297,7 @@ export default function OrderManagement() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-white border border-gray-200">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -334,7 +334,7 @@ export default function OrderManagement() {
         </Card>
 
         {/* Orders Table */}
-        <Card>
+        <Card className="bg-white border border-gray-200">
           <CardHeader>
             <CardTitle>Danh sách đơn hàng</CardTitle>
           </CardHeader>
@@ -455,7 +455,7 @@ export default function OrderManagement() {
               <div className="space-y-6">
                 {/* Customer Info */}
                 <div className="grid grid-cols-2 gap-4">
-                  <Card>
+                  <Card className="bg-white border border-gray-200">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <User className="w-4 h-4" />
@@ -478,7 +478,7 @@ export default function OrderManagement() {
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="bg-white border border-gray-200">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
@@ -498,7 +498,7 @@ export default function OrderManagement() {
                 </div>
 
                 {/* Order Items */}
-                <Card>
+                <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Package className="w-4 h-4" />

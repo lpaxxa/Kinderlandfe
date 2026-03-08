@@ -21,7 +21,7 @@ const formatCurrency = (amount: number): string => {
 // --- Skeleton Card ---
 function SkeletonCard() {
     return (
-        <Card className="border-0 shadow-md">
+        <Card className="border border-gray-200 shadow-sm bg-white">
             <CardContent className="p-6">
                 <div className="flex items-start justify-between animate-pulse">
                     <div className="flex-1 space-y-3">
@@ -110,7 +110,7 @@ export default function FinancialOverview() {
         : [];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -216,7 +216,7 @@ export default function FinancialOverview() {
 
                 {/* Info Card */}
                 {!loading && !error && (
-                    <Card className="border-0 shadow-md">
+                    <Card className="border border-gray-200 shadow-sm bg-white">
                         <CardHeader>
                             <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                 <LayoutDashboard className="w-5 h-5 text-green-600" />

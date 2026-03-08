@@ -133,7 +133,7 @@ export default function ImportOrderPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -193,7 +193,7 @@ export default function ImportOrderPage() {
                 {!submitSuccess && (
                     <>
                         {/* Step 1: SKU Search */}
-                        <Card className="border-0 shadow-md">
+                        <Card className="border border-gray-200 shadow-sm bg-white">
                             <CardHeader>
                                 <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
@@ -231,7 +231,7 @@ export default function ImportOrderPage() {
 
                         {/* Step 2: Store List */}
                         {orderLines.length > 0 && (
-                            <Card className="border-0 shadow-md">
+                            <Card className="border border-gray-200 shadow-sm bg-white">
                                 <CardHeader>
                                     <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                         <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
@@ -308,7 +308,7 @@ export default function ImportOrderPage() {
 
                         {/* Step 3: Summary & Submit */}
                         {orderLines.length > 0 && (
-                            <Card className="border-0 shadow-md">
+                            <Card className="border border-gray-200 shadow-sm bg-white">
                                 <CardHeader>
                                     <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                         <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>

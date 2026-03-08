@@ -129,7 +129,7 @@ export default function SkuPriceManagement() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -167,7 +167,7 @@ export default function SkuPriceManagement() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
                 {/* Lookup Card */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg text-[#2C2C2C]">Tra cứu SKU theo ID</CardTitle>
                         <CardDescription>Nhập ID của SKU để tải thông tin và chỉnh sửa giá</CardDescription>
@@ -212,7 +212,7 @@ export default function SkuPriceManagement() {
                 </Card>
 
                 {/* SKU Table */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg text-[#2C2C2C]">
                             Danh sách SKU đã tra cứu

@@ -494,7 +494,7 @@ export default function PromotionManagement() {
 
   if (showCreateForm) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-full bg-white">
         {/* Header */}
         <div className="bg-white border-b shadow-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -532,7 +532,7 @@ export default function PromotionManagement() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
             {/* Step 1: Basic Information */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -630,7 +630,7 @@ export default function PromotionManagement() {
             </Card>
 
             {/* Step 2: Discount Configuration */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -809,7 +809,7 @@ export default function PromotionManagement() {
             </Card>
 
             {/* Step 3: Scope */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -882,7 +882,7 @@ export default function PromotionManagement() {
             </Card>
 
             {/* Step 4: Schedule */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -998,7 +998,7 @@ export default function PromotionManagement() {
             </Card>
 
             {/* Step 5: Upload Banner */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -1025,7 +1025,7 @@ export default function PromotionManagement() {
             </Card>
 
             {/* Step 6: Status */}
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#AF140B] text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -1066,7 +1066,7 @@ export default function PromotionManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-white">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -1108,7 +1108,7 @@ export default function PromotionManagement() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1129,7 +1129,7 @@ export default function PromotionManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1150,7 +1150,7 @@ export default function PromotionManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1171,7 +1171,7 @@ export default function PromotionManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white border border-gray-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1195,7 +1195,7 @@ export default function PromotionManagement() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-white border border-gray-200">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -1384,7 +1384,7 @@ export default function PromotionManagement() {
           })}
 
           {filteredPromotions.length === 0 && (
-            <Card>
+            <Card className="bg-white border border-gray-200">
               <CardContent className="py-12 text-center">
                 <Gift className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-600 mb-2">

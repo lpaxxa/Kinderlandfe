@@ -111,7 +111,7 @@ export default function StockTransferPage() {
     const destStores = stores.filter((s) => !hasStock(s.availabilityStatus));
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -167,7 +167,7 @@ export default function StockTransferPage() {
                 {!submitSuccess && (
                     <>
                         {/* Step 1 — SKU Search */}
-                        <Card className="border-0 shadow-md">
+                        <Card className="border border-gray-200 shadow-sm bg-white">
                             <CardHeader>
                                 <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
@@ -201,7 +201,7 @@ export default function StockTransferPage() {
                         {stores.length > 0 && (
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* Source — stores with stock */}
-                                <Card className="border-0 shadow-md">
+                                <Card className="border border-gray-200 shadow-sm bg-white">
                                     <CardHeader className="pb-3">
                                         <CardTitle className="text-base text-[#2C2C2C] flex items-center gap-2">
                                             <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2a</span>
@@ -242,7 +242,7 @@ export default function StockTransferPage() {
                                 </Card>
 
                                 {/* Destination — out of stock stores */}
-                                <Card className="border-0 shadow-md">
+                                <Card className="border border-gray-200 shadow-sm bg-white">
                                     <CardHeader className="pb-3">
                                         <CardTitle className="text-base text-[#2C2C2C] flex items-center gap-2">
                                             <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-bold">2b</span>
@@ -286,7 +286,7 @@ export default function StockTransferPage() {
 
                         {/* Step 3 — Quantity & Submit */}
                         {stores.length > 0 && (
-                            <Card className="border-0 shadow-md">
+                            <Card className="border border-gray-200 shadow-sm bg-white">
                                 <CardHeader>
                                     <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
                                         <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>

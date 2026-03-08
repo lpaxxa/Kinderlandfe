@@ -173,7 +173,7 @@ export default function InventoryManagementPage() {
     const lowStock = items.filter((i) => i.quantity > 0 && i.quantity <= 5).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -248,7 +248,7 @@ export default function InventoryManagementPage() {
                         { label: 'Hết hàng', value: outOfStock, color: 'text-red-600', border: 'border-red-300' },
                         { label: 'Sắp hết', value: lowStock, color: 'text-yellow-600', border: 'border-yellow-200' },
                     ].map((s, i) => (
-                        <Card key={i} className={`border ${s.border} shadow-sm`}>
+                        <Card key={i} className={`bg-white border ${s.border} shadow-sm`}>
                             <CardContent className="p-4">
                                 <p className="text-xs text-gray-500 mb-1">{s.label}</p>
                                 <p className={`text-2xl font-bold ${s.color}`}>
@@ -271,7 +271,7 @@ export default function InventoryManagementPage() {
                 )}
 
                 {/* Table Card */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <div className="flex items-center justify-between gap-4 flex-wrap">
                             <div>

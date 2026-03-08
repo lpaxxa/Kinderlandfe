@@ -1,13 +1,4 @@
-const API_BASE_URL = '';
-
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('accessToken');
-    return {
-        'Content-Type': 'application/json',
-        Accept: '*/*',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
+import { api } from './api';
 
 // ---- Types ----
 
@@ -50,16 +41,8 @@ export const adminAccountApi = {
      * Returns all user accounts (admin only)
      */
     getAccounts: async (): Promise<AdminAccount[]> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/admin/accounts`, {
-            method: 'GET',
-            headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || `HTTP ${response.status}`);
-        }
-        const json: ApiResponse<AdminAccount[]> = await response.json();
-        return json.data;
+        const response = await api.get('/api/v1/admin/accounts');
+        return response.data;
     },
 
     /**
@@ -67,15 +50,7 @@ export const adminAccountApi = {
      * Create a new user account
      */
     createAccount: async (payload: CreateAccountPayload): Promise<void> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/admin/accounts/create`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || `HTTP ${response.status}`);
-        }
+        await api.post('/api/v1/admin/accounts/create', payload);
     },
 
     /**
@@ -83,17 +58,6 @@ export const adminAccountApi = {
      * Delete a user account by ID
      */
     deleteAccount: async (id: number): Promise<void> => {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_BASE_URL}/api/v1/admin/accounts/delete/${id}`, {
-            method: 'DELETE',
-            headers: {
-                Accept: '*/*',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-        });
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || `HTTP ${response.status}`);
-        }
+        await api.delete(`/api/v1/admin/accounts/delete/${id}`);
     },
 };

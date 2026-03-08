@@ -1,43 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import {
-  BarChart3,
-  Package,
-  ShoppingCart,
-  Users,
-  TrendingUp,
-  AlertTriangle,
-  DollarSign,
-  ArrowUpRight,
-  ArrowDownRight,
-  LogOut,
-  Settings,
-  Bell,
-  Store,
-  FileText,
-  Star,
-  Gift,
-  MessageSquare,
-  Archive,
-  Calendar,
+  BarChart3, Package, ShoppingCart, Users,
+  AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight,
+  Store, FileText, Star, Gift, MessageSquare, Archive,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { stores } from '../../data/stores';
 import { products } from '../../data/products';
 
 export default function AdminDashboard() {
-  const { adminUser, logoutAdmin } = useAdmin();
+  const { adminUser } = useAdmin();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logoutAdmin();
-    toast.success('Đã đăng xuất');
-    navigate('/admin/login');
-  };
 
   // Calculate inventory alerts
   const getInventoryAlerts = () => {
@@ -72,7 +50,6 @@ export default function AdminDashboard() {
 
   const inventoryAlerts = getInventoryAlerts();
   const lowStockAlerts = inventoryAlerts.filter((a) => a.type === 'low');
-  const excessStockAlerts = inventoryAlerts.filter((a) => a.type === 'excess');
 
   // Mock statistics
   const stats = {
@@ -117,285 +94,215 @@ export default function AdminDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Đang giao':
-        return 'bg-[#FFE5E3] text-[#AF140B]';
+        return 'bg-blue-100 text-blue-700';
       case 'Đã xác nhận':
-        return 'bg-[#D91810]/20 text-[#8D0F08]';
+        return 'bg-green-100 text-green-700';
       case 'Đang xử lý':
-        return 'bg-[#FFE5E3] text-[#AF140B]';
+        return 'bg-amber-100 text-amber-700';
       case 'Hoàn thành':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-700';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
+  const statIcons: Record<string, React.ReactNode> = {
+    revenue: <DollarSign className="w-5 h-5 text-white" />,
+    orders: <ShoppingCart className="w-5 h-5 text-white" />,
+    customers: <Users className="w-5 h-5 text-white" />,
+    products: <Package className="w-5 h-5 text-white" />,
+  };
+
+  const statBgs: Record<string, string> = {
+    revenue: 'bg-[#AF140B]',
+    orders: 'bg-[#D4AF37]',
+    customers: 'bg-blue-600',
+    products: 'bg-green-600',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#AF140B] rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="font-bold text-xl text-[#AF140B]">Kinderland Admin</h1>
-                <p className="text-xs text-gray-500">Quản trị hệ thống</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#AF140B] text-white text-xs rounded-full flex items-center justify-center">
-                  {lowStockAlerts.length}
-                </span>
-              </Button>
-              <div className="text-right">
-                <p className="text-sm font-medium">{adminUser?.name}</p>
-                <p className="text-xs text-gray-500">Administrator</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {Object.entries(stats).map(([key, stat]) => (
-            <Card key={key}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  {stat.label}
-                </CardTitle>
-                {key === 'revenue' && <DollarSign className="w-4 h-4 text-gray-400" />}
-                {key === 'orders' && <ShoppingCart className="w-4 h-4 text-gray-400" />}
-                {key === 'customers' && <Users className="w-4 h-4 text-gray-400" />}
-                {key === 'products' && <Package className="w-4 h-4 text-gray-400" />}
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="flex items-center gap-1 mt-1">
-                  {stat.trend === 'up' ? (
-                    <ArrowUpRight className="w-4 h-4 text-[#AF140B]" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4 text-red-600" />
-                  )}
-                  <span
-                    className={`text-xs font-medium ${
-                      stat.trend === 'up' ? 'text-[#AF140B]' : 'text-red-600'
-                    }`}
-                  >
-                    {Math.abs(stat.change)}%
-                  </span>
-                  <span className="text-xs text-gray-500">so với tháng trước</span>
+    <div className="p-6 bg-white min-h-full">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {Object.entries(stats).map(([key, stat]) => (
+          <Card key={key} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    {stat.trend === 'up' ? (
+                      <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <ArrowDownRight className="w-3.5 h-3.5 text-red-500" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${
+                        stat.trend === 'up' ? 'text-green-600' : 'text-red-500'
+                      }`}
+                    >
+                      {Math.abs(stat.change)}%
+                    </span>
+                    <span className="text-xs text-gray-400">vs tháng trước</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Inventory Alerts */}
-        {lowStockAlerts.length > 0 && (
-          <Card className="mb-8 border-l-4 border-l-[#AF140B]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-[#AF140B]" />
-                <CardTitle>Cảnh báo tồn kho thấp</CardTitle>
-                <Badge variant="destructive">{lowStockAlerts.length}</Badge>
-              </div>
-              <CardDescription>
-                Các sản phẩm cần được bổ sung kho ngay
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {lowStockAlerts.slice(0, 5).map((alert, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-[#FFE5E3] rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{alert.product}</p>
-                      <p className="text-xs text-gray-600">{alert.store}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="bg-white">
-                        {alert.qty} sản phẩm
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-                {lowStockAlerts.length > 5 && (
-                  <Button
-                    variant="link"
-                    className="w-full text-[#AF140B]"
-                    onClick={() => navigate('/admin/inventory')}
-                  >
-                    Xem tất cả {lowStockAlerts.length} cảnh báo →
-                  </Button>
-                )}
+                <div className={`${statBgs[key]} p-2.5 rounded-lg`}>
+                  {statIcons[key]}
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        ))}
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Recent Orders */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5" />
-                Đơn hàng gần đây
-              </CardTitle>
-              <CardDescription>Đơn hàng mới nhất trong hệ thống</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between pb-4 border-b last:border-0 last:pb-0">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{order.id}</p>
-                      <p className="text-xs text-gray-600">{order.customer}</p>
-                      <p className="text-xs text-gray-500 mt-1">{order.time}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm mb-1">{order.total}</p>
-                      <Badge className={getStatusColor(order.status)} variant="outline">
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => navigate('/admin/orders')}
-              >
-                Xem tất cả đơn hàng →
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Pending Returns */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Archive className="w-5 h-5" />
-                Yêu cầu trả hàng
-              </CardTitle>
-              <CardDescription>Đang chờ xử lý</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingReturns.map((ret) => (
-                  <div key={ret.id} className="p-4 bg-[#FFE5E3] rounded-lg border border-[#AF140B]/30">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-sm">{ret.id}</p>
-                        <p className="text-xs text-gray-600">Đơn hàng: {ret.order}</p>
-                      </div>
-                      <Badge variant="outline" className="bg-white">
-                        Chờ duyệt
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-1">{ret.customer}</p>
-                    <p className="text-xs text-gray-600 mb-2">Lý do: {ret.reason}</p>
-                    <p className="text-xs text-gray-500">{ret.time}</p>
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => navigate('/admin/returns')}
-              >
-                Xem tất cả yêu cầu →
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quản lý nhanh</CardTitle>
-            <CardDescription>Truy cập các chức năng quản trị chính</CardDescription>
+      {/* Inventory Alerts */}
+      {lowStockAlerts.length > 0 && (
+        <Card className="mb-6 border-l-4 border-l-[#AF140B] border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#AF140B]" />
+              <CardTitle className="text-base">Cảnh báo tồn kho thấp</CardTitle>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{lowStockAlerts.length}</Badge>
+            </div>
+            <CardDescription className="text-xs">
+              Các sản phẩm cần được bổ sung kho ngay
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/products')}
-              >
-                <Package className="w-6 h-6" />
-                <span className="text-sm">Sản phẩm</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/orders')}
-              >
-                <ShoppingCart className="w-6 h-6" />
-                <span className="text-sm">Đơn hàng</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/users')}
-              >
-                <Users className="w-6 h-6" />
-                <span className="text-sm">Người dùng</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/promotions')}
-              >
-                <Gift className="w-6 h-6" />
-                <span className="text-sm">Khuyến mãi</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/inventory')}
-              >
-                <Store className="w-6 h-6" />
-                <span className="text-sm">Tồn kho</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/blog')}
-              >
-                <FileText className="w-6 h-6" />
-                <span className="text-sm">Bài viết</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/reviews')}
-              >
-                <Star className="w-6 h-6" />
-                <span className="text-sm">Đánh giá</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate('/admin/reports')}
-              >
-                <BarChart3 className="w-6 h-6" />
-                <span className="text-sm">Báo cáo</span>
-              </Button>
+            <div className="space-y-2">
+              {lowStockAlerts.slice(0, 5).map((alert, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-gray-800">{alert.product}</p>
+                    <p className="text-xs text-gray-500">{alert.store}</p>
+                  </div>
+                  <Badge variant="outline" className="bg-white text-xs">
+                    {alert.qty} sản phẩm
+                  </Badge>
+                </div>
+              ))}
+              {lowStockAlerts.length > 5 && (
+                <Button
+                  variant="link"
+                  className="w-full text-[#AF140B] text-sm"
+                  onClick={() => navigate('/admin/inventory')}
+                >
+                  Xem tất cả {lowStockAlerts.length} cảnh báo →
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Recent Orders */}
+        <Card className="border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
+              <ShoppingCart className="w-4 h-4 text-[#D4AF37]" />
+              Đơn hàng gần đây
+            </CardTitle>
+            <CardDescription className="text-xs">Đơn hàng mới nhất trong hệ thống</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentOrders.map((order) => (
+                <div key={order.id} className="flex items-center justify-between pb-3 border-b last:border-0 last:pb-0">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-gray-800">{order.id}</p>
+                    <p className="text-xs text-gray-500">{order.customer}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{order.time}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-sm text-gray-800 mb-1">{order.total}</p>
+                    <Badge className={getStatusColor(order.status)} variant="outline">
+                      {order.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-3 text-sm border-gray-200 hover:border-[#AF140B] hover:text-[#AF140B]"
+              onClick={() => navigate('/admin/orders')}
+            >
+              Xem tất cả đơn hàng →
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Pending Returns */}
+        <Card className="border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
+              <Archive className="w-4 h-4 text-[#AF140B]" />
+              Yêu cầu trả hàng
+            </CardTitle>
+            <CardDescription className="text-xs">Đang chờ xử lý</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingReturns.map((ret) => (
+                <div key={ret.id} className="p-3 bg-red-50 rounded-lg border border-red-100">
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div>
+                      <p className="font-medium text-sm text-gray-800">{ret.id}</p>
+                      <p className="text-xs text-gray-500">Đơn hàng: {ret.order}</p>
+                    </div>
+                    <Badge variant="outline" className="bg-white text-xs">
+                      Chờ duyệt
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-700">{ret.customer}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Lý do: {ret.reason}</p>
+                  <p className="text-xs text-gray-400 mt-1">{ret.time}</p>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-3 text-sm border-gray-200 hover:border-[#AF140B] hover:text-[#AF140B]"
+              onClick={() => navigate('/admin/returns')}
+            >
+              Xem tất cả yêu cầu →
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">Quản lý nhanh</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Sản phẩm', icon: Package, path: '/admin/products', color: 'bg-[#AF140B]', hover: 'hover:border-[#AF140B]', textHover: 'group-hover:text-[#AF140B]' },
+          { label: 'Đơn hàng', icon: ShoppingCart, path: '/admin/orders', color: 'bg-[#D4AF37]', hover: 'hover:border-[#D4AF37]', textHover: 'group-hover:text-[#D4AF37]' },
+          { label: 'Người dùng', icon: Users, path: '/admin/users', color: 'bg-indigo-600', hover: 'hover:border-indigo-500', textHover: 'group-hover:text-indigo-600' },
+          { label: 'Khuyến mãi', icon: Gift, path: '/admin/promotions', color: 'bg-purple-600', hover: 'hover:border-purple-500', textHover: 'group-hover:text-purple-600' },
+          { label: 'Tồn kho', icon: Store, path: '/admin/inventory', color: 'bg-blue-600', hover: 'hover:border-blue-500', textHover: 'group-hover:text-blue-600' },
+          { label: 'Bài viết', icon: FileText, path: '/admin/blog', color: 'bg-teal-600', hover: 'hover:border-teal-500', textHover: 'group-hover:text-teal-600' },
+          { label: 'Đánh giá', icon: Star, path: '/admin/reviews', color: 'bg-amber-500', hover: 'hover:border-amber-500', textHover: 'group-hover:text-amber-600' },
+          { label: 'Báo cáo', icon: BarChart3, path: '/admin/reports', color: 'bg-green-600', hover: 'hover:border-green-500', textHover: 'group-hover:text-green-600' },
+        ].map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={idx}
+              onClick={() => navigate(item.path)}
+              className={`flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl ${item.hover} hover:shadow-md transition-all group`}
+            >
+              <div className={`w-10 h-10 ${item.color} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <Icon className="w-5 h-5 text-white" />
+              </div>
+              <span className={`text-sm font-medium text-gray-700 ${item.textHover}`}>{item.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

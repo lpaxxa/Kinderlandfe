@@ -144,7 +144,7 @@ export default function ReviewManagement() {
     const badCount = reviews.filter((r) => r.rating <= 2).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -179,7 +179,7 @@ export default function ReviewManagement() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
                 {/* Search Card */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg text-[#2C2C2C]">Tra cứu đánh giá theo sản phẩm</CardTitle>
                         <CardDescription>Nhập Product ID để xem tất cả đánh giá của sản phẩm đó</CardDescription>
@@ -230,7 +230,7 @@ export default function ReviewManagement() {
                             { label: 'Tích cực (≥4★)', value: goodCount, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
                             { label: 'Cần xử lý (≤2★)', value: badCount, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
                         ].map((s, i) => (
-                            <Card key={i} className={`border ${s.border} shadow-sm`}>
+                            <Card key={i} className={`bg-white border ${s.border} shadow-sm`}>
                                 <CardContent className="p-4">
                                     <p className="text-xs text-gray-500 mb-1">{s.label}</p>
                                     <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -242,7 +242,7 @@ export default function ReviewManagement() {
 
                 {/* Filter bar */}
                 {reviews.length > 0 && (
-                    <Card className="border-0 shadow-md">
+                    <Card className="border border-gray-200 shadow-sm bg-white">
                         <CardContent className="pt-4 pb-4">
                             <div className="flex flex-wrap gap-3 items-center">
                                 <span className="text-sm font-medium text-gray-600">Lọc:</span>
@@ -277,7 +277,7 @@ export default function ReviewManagement() {
                 )}
 
                 {/* Reviews List */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg text-[#2C2C2C]">

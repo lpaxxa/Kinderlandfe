@@ -1,17 +1,5 @@
 // SKU API Service
-// Vite proxy forward /api/* → http://localhost:8080/api/*
-
-const API_BASE_URL = "";
-
-// --- Helper: get token ---
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem("accessToken");
-    return {
-        "Content-Type": "application/json",
-        Accept: "*/*",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
+import { api } from './api';
 
 // --- Types ---
 
@@ -49,18 +37,8 @@ export const skuApi = {
      * GET /api/v1/sku/{id}
      */
     getSkuById: async (id: number): Promise<SkuItem> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/sku/${id}`, {
-            method: "GET",
-            headers: getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: SkuResponse = await response.json();
-        return json.data;
+        const response: SkuResponse = await api.get(`/api/v1/sku/${id}`);
+        return response.data;
     },
 
     /**
@@ -68,19 +46,8 @@ export const skuApi = {
      * PUT /api/v1/sku/{id}
      */
     updateSku: async (id: number, payload: UpdateSkuPayload): Promise<SkuItem> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/sku/${id}`, {
-            method: "PUT",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: SkuResponse = await response.json();
-        return json.data;
+        const response: SkuResponse = await api.put(`/api/v1/sku/${id}`, payload);
+        return response.data;
     },
 };
 

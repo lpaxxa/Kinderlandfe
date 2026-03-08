@@ -1,17 +1,5 @@
 // Financial API Service
-// Vite proxy forward /api/* → http://localhost:8080/api/*
-
-const API_BASE_URL = "";
-
-// --- Helper: get token ---
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem("accessToken");
-    return {
-        "Content-Type": "application/json",
-        Accept: "*/*",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
+import { api } from './api';
 
 // --- Types ---
 
@@ -38,18 +26,8 @@ export const financialApi = {
      * GET /api/v1/financial/overview
      */
     getFinancialOverview: async (): Promise<FinancialOverviewData> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/financial/overview`, {
-            method: "GET",
-            headers: getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: FinancialOverviewResponse = await response.json();
-        return json.data;
+        const response: FinancialOverviewResponse = await api.get('/api/v1/financial/overview');
+        return response.data;
     },
 };
 

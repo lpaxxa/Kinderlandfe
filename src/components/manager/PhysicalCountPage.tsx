@@ -121,7 +121,7 @@ export default function PhysicalCountPage() {
     const savedCount = rows.filter((r) => r.saved).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
@@ -189,7 +189,7 @@ export default function PhysicalCountPage() {
                         { label: 'Đã lưu', value: savedCount, color: 'text-green-700', border: 'border-green-200' },
                         { label: 'Có lỗi', value: rows.filter(r => r.error).length, color: 'text-red-600', border: 'border-red-200' },
                     ].map((s, i) => (
-                        <Card key={i} className={`border ${s.border} shadow-sm`}>
+                        <Card key={i} className={`bg-white border ${s.border} shadow-sm`}>
                             <CardContent className="p-4">
                                 <p className="text-xs text-gray-500 mb-1">{s.label}</p>
                                 <p className={`text-2xl font-bold ${s.color}`}>
@@ -212,7 +212,7 @@ export default function PhysicalCountPage() {
                 )}
 
                 {/* Table */}
-                <Card className="border-0 shadow-md">
+                <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg text-[#2C2C2C]">
                             Danh sách kiểm kê
