@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { ShoppingCart, Heart, Share2, Star, Truck, Shield, RefreshCw, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Heart, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
 import { toast } from 'sonner';
-import { useEffect } from "react";
 import api from "../../services/api";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useApp();
+  const { addToCart, wishlistItems, setWishlistItems } = useApp();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -135,12 +134,15 @@ export default function ProductDetail() {
   const totalSkuStock = selectedSkuInventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0);
   const currentStock = selectedSku ? totalSkuStock : (product ? product.stock : 0);
 
-  // Prevent ordering more than available stock when SKU changes
+  // Prevent ordering more than available stock or less than 1 (if stock > 0)
   useEffect(() => {
-    if (quantity > currentStock) {
-      setQuantity(currentStock > 0 ? 1 : 0);
+    if (currentStock > 0) {
+      if (quantity === 0) setQuantity(1);
+      else if (quantity > currentStock) setQuantity(currentStock);
+    } else {
+      setQuantity(0);
     }
-  }, [currentStock]);
+  }, [currentStock, quantity]);
 
   if (loading) {
     return (
@@ -179,20 +181,47 @@ export default function ProductDetail() {
     return getStoreSkuQuantity(store.id) > 0;
   });
 
-  const handleAddToCart = () => {
-    // Guest có thể thêm vào giỏ hàng, không cần đăng nhập
-    addToCart(
-      selectedSku
-        ? { ...product, skuId: selectedSku.id, price: selectedSku.price }
-        : product,
-      quantity
-    );
-    toast.success('✅ Thêm vào giỏ hàng thành công!', {
-      description: `${quantity} x ${product.name}`,
-      duration: 2000,
-    });
-    navigate('/cart');
+  const handleAddToCart = async () => {
+    try {
+      if (!selectedSku) {
+        throw new Error("Vui lòng chọn loại sản phẩm!");
+      }
+
+      // get user addresses to find nearest store mapping
+      let userAddresses: any[] = [];
+      try {
+        const addrRes = await api.getMyAddresses();
+        userAddresses = addrRes.data || addrRes || [];
+      } catch (e) {
+        // ignore strictly if they are logged in but don't have addresses
+        console.warn("Could not fetch user addresses", e);
+      }
+
+      const availableStores = stores.filter(store => getStoreSkuQuantity(store.id) > 0);
+      if (availableStores.length === 0) {
+        throw new Error("Sản phẩm hiện tại đã hết hàng ở tất cả các chi nhánh.");
+      }
+
+      // Logic "so sánh address của khách hàng" -> select closest store
+      // Since actual GPS logic is missing, default to the first available store
+      let closestStore = availableStores[0];
+      if (userAddresses.length > 0) {
+        // If we want real comparison, we string match city/district here.
+        // Doing a simple fallback for now
+        closestStore = availableStores[0];
+      }
+
+      await addToCart(selectedSku.id, quantity, closestStore.id);
+      
+      toast.success('✅ Thêm vào giỏ hàng thành công!', {
+        description: `${quantity} x ${product.name} (Từ ${closestStore.name})`,
+        duration: 2000,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Có lỗi xảy ra, vui lòng thử lại!");
+    }
   };
+
 
   const decreaseQuantity = () => {
     if (quantity > 1) setQuantity(quantity - 1);
@@ -241,43 +270,51 @@ export default function ProductDetail() {
 
           <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.description}</p>
 
-          {product.discount ? (
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl font-bold text-[#AF140B]">
-                  {selectedSku
-                    ? formatPrice(selectedSku.price)
-                    : formatPrice(product.price)}
-                </span>
-                <span className="bg-red-500 text-white px-3 py-1 rounded-full font-bold">
-                  Giảm {product.discount}%
-                </span>
-              </div>
-              <span className="text-lg text-gray-400 line-through">
-                Giá gốc: {formatPrice(product.originalPrice || 0)}
-              </span>
+          {(() => {
+            const discountPercent = product.discount || 0;
+            const currentOriginalPrice = selectedSku ? selectedSku.price : (product.originalPrice || product.price);
+            const currentFinalPrice = discountPercent > 0 
+              ? currentOriginalPrice - (currentOriginalPrice * discountPercent) / 100
+              : currentOriginalPrice;
 
-              {selectedSku && (
-                <div className="text-sm text-gray-500 mt-2">
-                  Size: {selectedSku.size} | Color: {selectedSku.color}
+            return discountPercent > 0 ? (
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-4xl font-bold text-[#AF140B]">
+                    {formatPrice(currentFinalPrice)}
+                  </span>
+                  <span className="bg-red-500 text-white px-3 py-1 rounded-full font-bold">
+                    Giảm {discountPercent}%
+                  </span>
                 </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="text-4xl font-bold text-[#AF140B] mb-2">
-                {selectedSku
-                  ? formatPrice(selectedSku.price)
-                  : formatPrice(product.price)}
-              </div>
+                <div className="text-lg text-gray-400 line-through">
+                  Giá gốc: {formatPrice(currentOriginalPrice)}
+                </div>
 
-              {selectedSku && (
-                <div className="text-sm text-gray-500 mb-4">
-                  Size: {selectedSku.size} | Color: {selectedSku.color}
+                {selectedSku && (
+                  <div className="text-sm text-gray-500 mt-2 font-medium">
+                    Loại: <span className="text-gray-800">{selectedSku.skuCode}</span> 
+                    {selectedSku.size && ` | Size: ${selectedSku.size}`} 
+                    {selectedSku.color && ` | Color: ${selectedSku.color}`}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mb-6">
+                <div className="text-4xl font-bold text-[#AF140B] mb-2">
+                  {formatPrice(currentFinalPrice)}
                 </div>
-              )}
-            </>
-          )}
+
+                {selectedSku && (
+                  <div className="text-sm text-gray-500 mt-2 font-medium">
+                    Loại: <span className="text-gray-800">{selectedSku.skuCode}</span>
+                    {selectedSku.size && ` | Size: ${selectedSku.size}`} 
+                    {selectedSku.color && ` | Color: ${selectedSku.color}`}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="mt-4">
             <p className="font-semibold mb-2">Chọn loại:</p>
@@ -328,14 +365,59 @@ export default function ProductDetail() {
             </p>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={currentStock === 0}
-            className="w-full bg-gradient-to-r from-[#AF140B] to-[#D91810] text-white py-4 rounded-2xl hover:from-[#8D0F08] hover:to-[#AF140B] transition-all shadow-xl flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
-          >
-            <ShoppingCart className="size-6" />
-            {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
-          </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={currentStock === 0}
+              className="w-full bg-[#AF140B] text-white py-4 rounded-2xl hover:bg-[#8D0F08] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
+            >
+              <ShoppingCart className="size-6" />
+              {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
+            </button>
+
+          {/* Add to Wishlist Button */}
+          {(() => {
+             const productId = product.id && typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+             const wishlistItem = wishlistItems.find(item => (item.productId || item.id) === productId);
+             const isLiked = !!wishlistItem;
+
+             return (
+               <button
+                 onClick={async () => {
+                   try {
+                     if (isLiked) {
+                        const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
+                        const response = await api.removeWishlist(targetId);
+                        const items = response.data?.items || response.items || response.data || [];
+                        if (Array.isArray(items)) setWishlistItems(items);
+                        toast.success("Đã xóa khỏi yêu thích", {
+                          description: product.name,
+                          duration: 2000,
+                        });
+                     } else {
+                        const response = await api.addWishlist(productId);
+                        const items = response.data?.items || response.items || response.data || [];
+                        if (Array.isArray(items)) setWishlistItems(items);
+                        toast.success('❤️ Đã thêm vào yêu thích', {
+                          description: product.name,
+                          duration: 2000,
+                        });
+                     }
+                   } catch (error: any) {
+                     const errorMsg = error.message || "";
+                     if (errorMsg.includes('400') || errorMsg.includes('already') || errorMsg.includes('đã có')) {
+                       toast.error('Sản phẩm đã có trong danh sách yêu thích');
+                     } else {
+                       toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+                     }
+                   }
+                 }}
+                 className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg group"
+               >
+                 <Heart className={`size-6 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-[#AF140B] group-hover:fill-[#AF140B]"}`} />
+                 {isLiked ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+               </button>
+             );
+          })()}
 
           {/* Find in Store Button */}
           <button
@@ -440,6 +522,7 @@ export default function ProductDetail() {
         isOpen={showStoreModal}
         onClose={() => setShowStoreModal(false)}
         product={product}
+        selectedSku={selectedSku}
       />
     </div>
   );

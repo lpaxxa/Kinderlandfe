@@ -15,13 +15,11 @@ import {
   Mail,
   Phone,
   MapPin,
-  Calendar,
   Edit,
   Save,
   X,
   ArrowLeft,
   Shield,
-  Trash2,
 } from "lucide-react";
 
 import {
@@ -36,20 +34,34 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 
+interface Address {
+  addressId: number;
+  street: string;
+  provinceId: string;
+  provinceName: string;
+  districtId: string;
+  districtName: string;
+  wardId: string;
+  wardName: string;
+  isDefault: boolean;
+  fullAddress?: string;
+}
+
 export default function CustomerProfile() {
   const { user } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [addresses, setAddresses] = useState([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [formData, setFormData] = useState({
     name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
     email: user?.email || "",
     phone: user?.phone || "",
     address: "",
     dateOfBirth: "",
+    gender: "Other",
   });
 
-  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
 
   const [addressForm, setAddressForm] = useState({
     street: "",
@@ -61,13 +73,13 @@ export default function CustomerProfile() {
     wardName: "",
   });
 
-  const handleAddressChange = (e) => {
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setAddressForm({
       ...addressForm,
       [e.target.name]: e.target.value,
     });
   };
-  const startEditAddress = (addr) => {
+  const startEditAddress = (addr: Address) => {
     setEditingAddressId(addr.addressId);
 
     setAddressForm({
@@ -102,7 +114,7 @@ export default function CustomerProfile() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -163,26 +175,24 @@ export default function CustomerProfile() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10">
+    <div className="min-h-screen bg-slate-50 py-10">
       <div className="container mx-auto px-4 max-w-5xl">
 
         {/* PROFILE HEADER */}
-        <Card className="mb-8 overflow-hidden border border-gray-200 shadow-xl">
-          <div className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 h-28 relative">
+        <Card className="mb-10 overflow-hidden border-none shadow-2xl bg-white ring-1 ring-black/5">
+          <div className="bg-gradient-to-r from-[#AF140B] via-[#D32F2F] to-[#C62828] h-32 relative">
             <div className="absolute inset-0 bg-black/10" />
           </div>
 
-          <CardContent className="flex items-center gap-5 -mt-12 pb-6">
-
-            <div className="w-20 h-20 rounded-full bg-white shadow-xl border-4 border-white flex items-center justify-center text-2xl font-bold text-red-500">
-              {user?.name?.charAt(0) || "U"}
+          <CardContent className="flex items-center gap-6 -mt-12 pb-8 px-8">
+            <div className="w-24 h-24 rounded-full bg-white shadow-2xl border-4 border-white flex items-center justify-center text-3xl font-bold text-[#AF140B] transform transition-transform hover:scale-105">
+              {(user?.username || user?.name || "U").charAt(0).toUpperCase()}
             </div>
 
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900">
-                {user?.name}
+              <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                {user?.username || user?.name}
               </h2>
-
               <p className="text-gray-600 text-sm">
                 {user?.email}
               </p>

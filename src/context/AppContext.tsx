@@ -1,32 +1,19 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { DEMO_CUSTOMERS } from '../data/users';
+import api from '../services/api';
 
 interface User {
   id: string;
   email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
   name: string;
   phone?: string;
   role?: string;
   address?: string;
   membershipTier?: 'bronze' | 'silver' | 'gold';
   points?: number;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  description: string;
-  category: string;
-  stock: number;
-  types?: string[];
-}
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-  type?: string;
 }
 
 interface Voucher {
@@ -39,16 +26,21 @@ interface AppContextType {
   setUser: (user: User | null) => void;
   user: User | null;
   login: (email: string, password: string) => void;
-  register: (email: string, password: string, name: string) => void;
+  register: (email: string, name: string) => void;
   logout: () => void;
-  cart: CartItem[];
-  addToCart: (product: Product, quantity: number, type?: string) => void;
-  removeFromCart: (productId: string) => void;
-  updateCartItem: (productId: string, quantity: number, type?: string) => void;
+  cart: any[];
+  addToCart: (skuId: number, quantity: number, storeId: number) => Promise<void>;
+  removeFromCart: (cartItemId: number) => Promise<void>;
+  updateCartItem: (cartItemId: number, quantity: number) => Promise<void>;
   clearCart: () => void;
   voucher: Voucher | null;
   applyVoucher: (code: string) => boolean;
   removeVoucher: () => void;
+  wishlistCount: number;
+  wishlistItems: any[];
+  setWishlistItems: (items: any[]) => void;
+  addWishlistItemGlobal: (item: any) => void;
+  removeWishlistItemGlobal: (productId: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -86,18 +78,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const stored = localStorage.getItem('cart');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cart, setCart] = useState<any[]>([]);
 
+  // Fetch Cart globally
   React.useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+    const fetchInitialCart = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (token && user) {
+        try {
+          const res = await api.getCart();
+          let items = res.data || res.items || res;
+          if (res && res.data && Array.isArray(res.data.items)) {
+            items = res.data.items;
+          }
+          if (Array.isArray(items)) {
+            setCart(items);
+          }
+        } catch (error) {
+          console.error("Failed to fetch initial cart:", error);
+        }
+      }
+    };
+    fetchInitialCart();
+  }, [user]);
 
   const [voucher, setVoucher] = useState<Voucher | null>(null);
 
@@ -111,6 +114,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setUser({
         id: foundCustomer.id,
         email: foundCustomer.email,
+        username: foundCustomer.email.split('@')[0],
+        firstName: foundCustomer.name.split(' ')[0],
+        lastName: foundCustomer.name.split(' ').slice(1).join(' '),
         name: foundCustomer.name,
         phone: foundCustomer.phone,
         address: foundCustomer.address,
@@ -118,22 +124,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         points: foundCustomer.points,
       });
     } else {
-      // Fallback to mock login for any email (for backward compatibility)
+      // Fallback to mock login for any email
+      const name = email.split('@')[0];
       setUser({
         id: '1',
         email,
-        name: email.split('@')[0],
+        username: name,
+        firstName: name,
+        lastName: '',
+        name: name,
         membershipTier: 'bronze',
         points: 0,
       });
     }
   };
 
-  const register = (email: string, password: string, name: string) => {
+  const register = (email: string, name: string) => {
     // Mock register
     setUser({
       id: '1',
       email,
+      username: email.split('@')[0],
+      firstName: name.split(' ')[0],
+      lastName: name.split(' ').slice(1).join(' '),
       name,
     });
   };
@@ -142,37 +155,94 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setCart([]);
     setVoucher(null);
+    setWishlistItems([]);
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   };
 
-  const addToCart = (product: Product, quantity: number, type?: string) => {
-    setCart((prev) => {
-      const existingIndex = prev.findIndex(
-        (item) => item.product.id === product.id && item.type === type
-      );
-      if (existingIndex > -1) {
-        const newCart = [...prev];
-        newCart[existingIndex].quantity += quantity;
-        return newCart;
-      }
-      return [...prev, { product, quantity, type }];
-    });
-  };
+  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
+  const wishlistCount = wishlistItems.length;
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
-  };
-
-  const updateCartItem = (productId: string, quantity: number, type?: string) => {
-    setCart((prev) => {
-      return prev.map((item) => {
-        if (item.product.id === productId && item.type === type) {
-          return { ...item, quantity };
+  React.useEffect(() => {
+    const fetchInitialWishlistCount = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (token && user) {
+        try {
+          const res = await api.get("/api/v1/wishlist");
+          let items = res.data || res.items || res;
+          if (Array.isArray(items)) {
+            setWishlistItems(items);
+          } else if (items && Array.isArray(items.items)) {
+            setWishlistItems(items.items);
+          }
+        } catch (error) {
+          console.error("Failed to fetch initial wishlist count:", error);
         }
-        return item;
-      });
+      }
+    };
+    fetchInitialWishlistCount();
+  }, [user]);
+
+  const addWishlistItemGlobal = (item: any) => {
+    setWishlistItems(prev => {
+      // Avoid duplicates
+      const exists = prev.some(i => (i.productId || i.id) === (item.productId || item.id));
+      if (exists) return prev;
+      return [...prev, item];
     });
+  };
+
+  const removeWishlistItemGlobal = (productId: number) => {
+    setWishlistItems(prev => prev.filter(item => (item.productId || item.id) !== productId));
+  };
+
+  const addToCart = async (skuId: number, quantity: number, storeId: number) => {
+    if (!user) {
+      throw new Error("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+    }
+    
+    const res = await api.addToCart(skuId, quantity, storeId);
+    let items = res.data || res.items || res;
+    if (res && res.data && Array.isArray(res.data.items)) {
+      items = res.data.items;
+    }
+    if (Array.isArray(items)) {
+      setCart(items);
+    } else {
+      const cartRes = await api.getCart();
+      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
+      if (Array.isArray(newItems)) setCart(newItems);
+    }
+  };
+
+  const removeFromCart = async (cartItemId: number) => {
+    const res = await api.removeCartItem(cartItemId);
+    let items = res.data || res.items || res;
+    if (res && res.data && Array.isArray(res.data.items)) {
+      items = res.data.items;
+    }
+    if (Array.isArray(items)) {
+      setCart(items);
+    } else {
+      const cartRes = await api.getCart();
+      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
+      if (Array.isArray(newItems)) setCart(newItems);
+    }
+  };
+
+  const updateCartItem = async (cartItemId: number, quantity: number) => {
+    const res = await api.updateCartItem(cartItemId, quantity);
+    let items = res.data || res.items || res;
+    if (res && res.data && Array.isArray(res.data.items)) {
+      items = res.data.items;
+    }
+    if (Array.isArray(items)) {
+      setCart(items);
+    } else {
+      const cartRes = await api.getCart();
+      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
+      if (Array.isArray(newItems)) setCart(newItems);
+    }
   };
 
   const clearCart = () => {
@@ -210,6 +280,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         voucher,
         applyVoucher,
         removeVoucher,
+        wishlistCount,
+        wishlistItems,
+        setWishlistItems,
+        addWishlistItemGlobal,
+        removeWishlistItemGlobal,
       }}
     >
       {children}

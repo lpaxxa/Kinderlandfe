@@ -82,11 +82,14 @@ export const api = {
 
   addWishlist: async (productId: number) => {
     try {
+      console.log('Sending to wishlist productId:', productId);
       const token = localStorage.getItem("accessToken");
-      
+
       if (!token) {
         throw new Error("Vui lòng đăng nhập để sử dụng tính năng này");
       }
+
+      console.log('Request body:', JSON.stringify({ productId: productId }));
 
       const response = await fetch(`${API_BASE_URL}/api/v1/wishlist/items`, {
         method: "POST",
@@ -100,16 +103,144 @@ export const api = {
       });
 
       if (!response.ok) {
+        let errorData = `HTTP error! status: ${response.status}`;
+        try {
+          const resText = await response.text();
+          if (resText) errorData = resText;
+        } catch (e) {}
+        throw new Error(errorData);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  removeWishlist: async (id: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để sử dụng tính năng này");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/wishlist/items/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Wishlist API error:", error);
+      console.error("Wishlist API delete error:", error);
       throw error;
     }
   },
 
+  // --- CART APIs ---
+  getCart: async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      console.log("Cart API Response (GET):", data);
+      return data;
+    } catch (error) {
+      console.error("Cart API GET error:", error);
+      throw error;
+    }
+  },
+
+  addToCart: async (skuId: number, quantity: number, storeId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Vui lòng đăng nhập để sử dụng tính năng này");
+
+      console.log('Adding to cart:', { skuId, quantity, storeId });
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          skuId: skuId,
+          quantity: quantity,
+          storeId: storeId
+        }),
+      });
+
+      if (!response.ok) {
+        let errorData = `HTTP error! status: ${response.status}`;
+        try {
+          const resText = await response.text();
+          if (resText) errorData = resText;
+        } catch (e) {}
+        throw new Error(errorData);
+      }
+
+      const data = await response.json();
+      console.log("Cart API Response (POST add):", data);
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updateCartItem: async (cartItemId: number, quantity: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+
+      console.log(`Updating cart item: ${cartItemId} with quantity: ${quantity}. Token present: ${!!token}`);
+      // Use query parameter as per documentation screenshot
+      const endpoint = `/api/v1/cart/${cartItemId}?quantity=${quantity}`;
+      return await api.put(endpoint, {});
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  removeCartItem: async (cartItemId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+
+      console.log(`Removing cart item: ${cartItemId}. Token present: ${!!token}`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart/${cartItemId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      console.log("Cart API Response (DELETE):", data);
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   /**
    * Generic GET request
@@ -187,6 +318,128 @@ export const api = {
       return await response.json();
     } catch (error) {
       console.error("API PUT error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get inventory availability for a product or specific SKU
+   */
+  getInventoryAvailability: async (skuId?: number, productId?: number) => {
+    try {
+      let url = `${API_BASE_URL}/api/v1/inventory/availability`;
+      const params = new URLSearchParams();
+      if (skuId) params.append('skuId', skuId.toString());
+      if (productId) params.append('productId', productId.toString());
+      
+      const queryString = params.toString();
+      if (queryString) url += `?${queryString}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Inventory Availability API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get user's addresses
+   */
+  getMyAddresses: async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/address/my-addresses`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("Get addresses API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new order
+   */
+  createOrder: async (addressId: number, storeId: number, items: any[]) => {
+    try {
+      const endpoint = `/api/v1/orders/create?addressId=${addressId}&storeId=${storeId}`;
+      console.log("Creating order through api.post:", endpoint, items);
+      return await api.post(endpoint, items);
+    } catch (error) {
+      console.error("Create order API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get nearby stores based on coordinates
+   */
+  getNearbyStores: async (lat: number, lng: number, radius: number = 20) => {
+    try {
+      const endpoint = `/api/v1/stores/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+      return await api.get(endpoint);
+    } catch (error) {
+      console.error("Get nearby stores API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Initiate checkout for an order
+   */
+  checkoutOrder: async (orderId: number, paymentMethod: string = "VNPAY") => {
+    try {
+      const endpoint = `/api/v1/orders/${orderId}/checkout`;
+      console.log("Initiating checkout through api.post:", endpoint, { paymentMethod });
+      return await api.post(endpoint, { paymentMethod });
+    } catch (error) {
+      console.error("Checkout order API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get current user's orders
+   */
+  getMyOrders: async () => {
+    try {
+      return await api.get('/api/v1/orders/my-orders');
+    } catch (error) {
+      console.error("Get my orders API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update order status (e.g., cancel, return)
+   */
+  updateOrderStatus: async (orderId: number | string, status: string) => {
+    try {
+      // Based on Swagger: /api/v1/orders/{orderId}/status?status={status}
+      const endpoint = `/api/v1/orders/${orderId}/status?status=${status}`;
+      return await api.put(endpoint, {});
+    } catch (error) {
+      console.error("Update order status API error:", error);
       throw error;
     }
   },

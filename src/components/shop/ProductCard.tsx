@@ -1,6 +1,5 @@
-import React from "react";
 import { Link } from "react-router";
-import { Star, ShoppingCart, Heart } from "lucide-react";
+import { Star, Eye, Heart } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { toast } from "sonner";
 import api from "../../services/api";
@@ -11,8 +10,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, featured = false }: ProductCardProps) {
-  console.log("ProductCard render:", product.name);
-  const { addToCart } = useApp();
+  const { wishlistItems, setWishlistItems } = useApp();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -31,6 +29,12 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
 
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 !== 0;
+
+  const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+  
+  // Find if item is in wishlist globally
+  const wishlistItem = wishlistItems.find(item => (item.productId || item.id) === productId);
+  const isLiked = !!wishlistItem;
 
   return (
     <Link
@@ -58,22 +62,43 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
             e.preventDefault();
 
             try {
-              await api.addWishlist(product.id);
+              if (isLiked) {
+                // Remove from wishlist
+                const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
+                const response = await api.removeWishlist(targetId);
+                const items = response.data?.items || response.items || response.data || [];
+                if (Array.isArray(items)) setWishlistItems(items);
+                
+                toast.success("Đã xóa khỏi yêu thích", {
+                  description: product.name,
+                  duration: 2000,
+                });
+              } else {
+                // Add to wishlist
+                const response = await api.addWishlist(productId);
+                const items = response.data?.items || response.items || response.data || [];
+                if (Array.isArray(items)) setWishlistItems(items);
 
-              toast.success("❤️ Đã thêm vào wishlist", {
-                description: product.name,
-                duration: 2000,
-              });
-
+                toast.success("❤️ Đã thêm vào yêu thích", {
+                  description: product.name,
+                  duration: 2000,
+                });
+              }
             } catch (error: any) {
-              console.error(error);
-
-              toast.error(error.message || "Không thể thêm vào wishlist");
+              const errorMsg = error.message || "";
+              if (errorMsg.includes('400') || errorMsg.includes('already') || errorMsg.includes('đã có') || errorMsg.includes('already in')) {
+                // If it was somehow a duplicate error, maybe our local state is out of sync. 
+                toast.error("Sản phẩm đã có trong danh sách yêu thích");
+              } else {
+                toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+              }
             }
           }}
-          className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full hover:bg-[#FFE5E3] hover:scale-110 transition-all shadow-md"
+          className={`absolute top-3 left-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full hover:bg-[#FFE5E3] hover:scale-110 transition-all shadow-md group`}
         >
-          <Heart className="size-5 text-[#AF140B]" />
+          <Heart 
+            className={`size-5 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-gray-400 group-hover:text-[#AF140B]"}`} 
+          />
         </button>
       </div>
 
@@ -121,21 +146,13 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
           )}
         </div>
 
-        {/* ADD TO CART */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            addToCart(product, 1);
-            toast.success("✅ Thêm vào giỏ hàng thành công!", {
-              description: product.name,
-              duration: 2000,
-            });
-          }}
+        {/* VIEW DETAILS */}
+        <div
           className="w-full bg-[#AF140B] text-white hover:bg-[#8D0F08] py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md hover:shadow-lg"
         >
-          <ShoppingCart className="size-5" />
-          Thêm vào giỏ
-        </button>
+          <Eye className="size-5" />
+          Xem chi tiết
+        </div>
       </div>
     </Link>
   );

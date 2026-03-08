@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider, useAdmin } from './context/AdminContext';
 import Navbar from './components/layout/Navbar';
@@ -19,6 +19,7 @@ import Cart from './components/cart/Cart';
 import Checkout from './components/checkout/Checkout';
 import Payment from './components/checkout/Payment';
 import OrderSuccess from './components/checkout/OrderSuccess';
+import PaymentResult from './components/checkout/PaymentResult';
 
 
 // Admin & Staff
@@ -47,7 +48,13 @@ import Wishlist from './components/pages/Wishlist';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function AdminProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'staff' | 'manager')[] }) {
@@ -404,6 +411,10 @@ function AppContent() {
                         <OrderSuccess />
                       </ProtectedRoute>
                     }
+                  />
+                  <Route
+                    path="/payment-result"
+                    element={<PaymentResult />}
                   />
                   {/* Customer Account Routes */}
                   <Route

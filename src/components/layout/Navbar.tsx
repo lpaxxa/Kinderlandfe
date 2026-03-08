@@ -14,7 +14,7 @@ import {
 } from '../ui/dropdown-menu';
 
 export default function Navbar() {
-  const { user, logout, cart } = useApp();
+  const { user, logout, cart, wishlistCount } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -93,12 +93,19 @@ export default function Navbar() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
-              <Link
-                to="/account/wishlist"
-                className="relative p-3 hover:bg-white/10 rounded-xl transition-all"
-              >
-                <Heart className="size-6 text-white" />
-              </Link>
+              <div className="relative">
+                <Link
+                  to="/account/wishlist"
+                  className="relative p-3 hover:bg-white/10 rounded-xl transition-all block"
+                >
+                  <Heart className="size-6 text-white" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-white text-[#AF140B] text-xs rounded-full size-6 flex items-center justify-center font-bold shadow-lg">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
               {/* Cart */}
               <div
                 className="relative"
@@ -128,7 +135,7 @@ export default function Navbar() {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl hover:bg-white/90 transition-all shadow-md">
                         <User className="size-5 text-[#AF140B]" />
-                        <span className="text-sm font-semibold text-[#4A4A4A]">{user.name}</span>
+                        <span className="text-sm font-semibold text-[#4A4A4A]">{user.username || user.name}</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
@@ -267,9 +274,13 @@ export default function Navbar() {
               {/* Mobile User Actions */}
               {user ? (
                 <div className="pt-4 border-t border-gray-200 space-y-2">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20">
-                    <User className="size-5 text-[#AF140B]" />
-                    <span className="text-sm font-semibold text-gray-700">{user.name}</span>
+                  <div className="bg-white shadow-2xl hover:shadow-red-900/10 transition-all duration-300 rounded-xl p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-[#AF140B] flex items-center justify-center text-lg font-bold text-white">
+                        {(user?.username || user?.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">{user.username || user.name}</span>
+                    </div>
                   </div>
                   <Link
                     to="/account"
