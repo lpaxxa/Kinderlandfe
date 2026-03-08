@@ -1,10 +1,6 @@
 // API Service utility for making HTTP requests
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  console.error('VITE_API_BASE_URL is not defined in .env file');
-}
+// Vite proxy forward /api/* → http://localhost:8080 (xem vite.config.ts)
+const API_BASE_URL = "";
 
 export const api = {
   /**
@@ -34,7 +30,7 @@ export const api = {
       throw error;
     }
   },
-  
+
 
   /**
    * Login with Google

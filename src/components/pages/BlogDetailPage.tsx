@@ -1,6 +1,6 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { blogs } from "../../data/blogs";
+import { blogApi, BlogItem } from "../../services/blogApi";
 import {
   Calendar,
   Clock,
@@ -8,22 +8,33 @@ import {
   ArrowLeft,
   Share2,
   BookmarkPlus,
+  Loader2,
 } from "lucide-react";
 
 export default function BlogDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const blog = blogs.find((b) => b.id === id);
 
-  if (!blog) {
-    return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <p className="text-gray-500 text-lg">
-          Không tìm thấy bài viết
-        </p>
-      </div>
-    );
-  }
+  const [blog, setBlog] = useState<BlogItem | null>(null);
+  const [allBlogs, setAllBlogs] = useState<BlogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    // Gọi song song: chi tiết blog + danh sách để lấy bài liên quan
+    Promise.all([
+      blogApi.getBlogById(id),
+      blogApi.getBlogs(0, 50),
+    ])
+      .then(([detail, list]) => {
+        setBlog(detail);
+        setAllBlogs(list);
+      })
+      .catch((err) => setError(err.message || "Không thể tải bài viết"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -34,10 +45,33 @@ export default function BlogDetailPage() {
     });
   };
 
-  const relatedBlogs = blogs
-    .filter(
-      (b) => b.category === blog.category && b.id !== blog.id,
-    )
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen gap-3 text-gray-500">
+        <Loader2 className="size-6 animate-spin" />
+        <span>Đang tải bài viết...</span>
+      </div>
+    );
+  }
+
+  if (error || !blog) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <p className="text-red-500 text-lg font-semibold mb-4">
+          ⚠️ {error || "Không tìm thấy bài viết"}
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-6 py-2 bg-[#AF140B] text-white rounded-xl font-semibold"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
+  const relatedBlogs = allBlogs
+    .filter((b) => b.categoryName === blog.categoryName && b.blogId !== blog.blogId)
     .slice(0, 3);
 
   return (
@@ -57,14 +91,14 @@ export default function BlogDetailPage() {
           <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-16">
             <div className="aspect-video overflow-hidden">
               <img
-                src={blog.image}
+                src={blog.imageUrl}
                 alt={blog.title}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="p-8 md:p-12">
               <div className="inline-block bg-[#FFE5E3] text-[#AF140B] px-4 py-2 rounded-full text-sm font-semibold mb-4">
-                {blog.category}
+                {blog.categoryName}
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
                 {blog.title}
@@ -75,16 +109,16 @@ export default function BlogDetailPage() {
                 <div className="flex items-center gap-2">
                   <User className="size-5" />
                   <span className="font-semibold">
-                    {blog.author}
+                    {blog.authorName}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="size-5" />
-                  <span>{formatDate(blog.date)}</span>
+                  <span>{formatDate(blog.publishedAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="size-5" />
-                  <span>{blog.readTime} đọc</span>
+                  <span>{blog.timeRead} phút đọc</span>
                 </div>
               </div>
 
@@ -100,12 +134,7 @@ export default function BlogDetailPage() {
                 </button>
               </div>
 
-              {/* Excerpt */}
-              <div className="bg-[#FFE5E3] border-l-4 border-[#AF140B] p-6 rounded-lg mb-8">
-                <p className="text-lg text-gray-700 font-medium italic">
-                  {blog.excerpt}
-                </p>
-              </div>
+              {/* Nội dung tóm tắt không có trong BE response - ẩn section này */}
 
               {/* Content */}
               <div className="prose prose-lg max-w-none">
@@ -179,26 +208,26 @@ export default function BlogDetailPage() {
               <div className="grid md:grid-cols-3 gap-6">
                 {relatedBlogs.map((relatedBlog) => (
                   <Link
-                    key={relatedBlog.id}
-                    to={`/blog/${relatedBlog.id}`}
+                    key={relatedBlog.blogId}
+                    to={`/blog/${relatedBlog.blogId}`}
                     className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all group border-2 border-gray-200 hover:border-[#AF140B]"
                   >
                     <div className="aspect-video overflow-hidden">
                       <img
-                        src={relatedBlog.image}
+                        src={relatedBlog.imageUrl}
                         alt={relatedBlog.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
                     <div className="p-4">
                       <div className="inline-block bg-[#FFE5E3] text-[#AF140B] px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        {relatedBlog.category}
+                        {relatedBlog.categoryName}
                       </div>
                       <h3 className="font-bold text-gray-800 line-clamp-2 group-hover:text-[#AF140B] transition-colors">
                         {relatedBlog.title}
                       </h3>
                       <p className="text-sm text-gray-500 mt-2">
-                        {relatedBlog.readTime}
+                        {relatedBlog.timeRead} phút đọc
                       </p>
                     </div>
                   </Link>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAdmin } from "../../context/AdminContext";
 import {
@@ -62,6 +62,12 @@ import { toast } from "sonner@2.0.3";
 import { format } from "date-fns";
 import { cn } from "../ui/utils";
 import { categories } from "../../data/products";
+import { products } from "../../data/products";
+import {
+  promotionApi,
+  Promotion as ApiPromotion,
+  CreatePromotionPayload,
+} from "../../services/promotionApi";
 
 // Types
 type PromotionType =
@@ -104,7 +110,35 @@ interface Promotion {
   modifiedAt?: Date;
 }
 
-// Mock data
+// Map BE → local UI type
+function fromApi(p: ApiPromotion): Promotion {
+  const now = new Date();
+  const start = new Date(p.startDate);
+  const end = new Date(p.endDate);
+  let status: PromotionStatus = "inactive";
+  if (end < now) status = "expired";
+  else if (start > now) status = "scheduled";
+  else status = "active";
+  return {
+    id: String(p.promotionId),
+    name: p.title,
+    code: p.code,
+    type: "discount_code",
+    discountType: "percentage",
+    discountValue: p.discountPercent,
+    minimumSpend: 0,
+    usageLimit: 0,
+    usedCount: 0,
+    scope: "entire_catalog",
+    startDate: start,
+    endDate: end,
+    status,
+    description: p.description,
+    createdBy: "",
+    createdAt: now,
+  };
+}
+
 const mockPromotions: Promotion[] = [
   {
     id: "PROMO-001",
@@ -170,16 +204,66 @@ const mockPromotions: Promotion[] = [
 export default function PromotionManagement() {
   const navigate = useNavigate();
   const { adminUser } = useAdmin();
-  const [promotions, setPromotions] =
-    useState<Promotion[]>(mockPromotions);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingPromotion, setEditingPromotion] =
-    useState<Promotion | null>(null);
+  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<
-    "all" | PromotionStatus
-  >("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | PromotionStatus>("all");
   const [showAuditLog, setShowAuditLog] = useState(false);
+
+  const fetchPromotions = async (keyword?: string) => {
+    setLoading(true); setApiError(null);
+    try {
+      const paged = await promotionApi.getPromotions({ keyword, size: 50 });
+      setPromotions((paged.content ?? []).map(fromApi));
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Không thể tải danh sách.");
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchPromotions(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => fetchPromotions(searchTerm || undefined), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Assign products state
+  const [assignTarget, setAssignTarget] = useState<Promotion | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(new Set());
+  const [assignSearch, setAssignSearch] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  const openAssignDialog = (promo: Promotion) => {
+    setAssignTarget(promo);
+    setSelectedProductIds(new Set());
+    setAssignSearch("");
+    setAssignError(null);
+  };
+
+  const handleAssignProducts = async () => {
+    if (!assignTarget || selectedProductIds.size === 0) return;
+    setAssigning(true); setAssignError(null);
+    try {
+      await promotionApi.assignProducts(Number(assignTarget.id), Array.from(selectedProductIds));
+      toast.success(`Đã gán ${selectedProductIds.size} sản phẩm vào “${assignTarget.name}”`);
+      setAssignTarget(null);
+      await fetchPromotions();
+    } catch (err: unknown) {
+      setAssignError(err instanceof Error ? err.message : "Gán thất bại.");
+    } finally { setAssigning(false); }
+  };
+
+  const toggleProduct = (id: number) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
 
   // Form state
   const [formData, setFormData] = useState<Partial<Promotion>>({
@@ -230,18 +314,14 @@ export default function PromotionManagement() {
     setShowCreateForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa khuyến mãi này?")) {
-      setPromotions(promotions.filter((p) => p.id !== id));
-      toast.success("Đã xóa khuyến mãi thành công");
-
-      // Log audit trail
-      console.log("Audit Log:", {
-        action: "DELETE_PROMOTION",
-        promotionId: id,
-        user: adminUser?.email,
-        timestamp: new Date(),
-      });
+  const handleDelete = async (id: string) => {
+    if (!confirm("Бạn có chắc muốn xóa khúyến mãi này?")) return;
+    try {
+      await promotionApi.deletePromotion(Number(id));
+      toast.success("Đã xóa thành công");
+      await fetchPromotions();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Xóa thất bại.");
     }
   };
 
@@ -303,57 +383,29 @@ export default function PromotionManagement() {
     return true;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) return;
-
-    const now = new Date();
-
-    if (editingPromotion) {
-      // Update existing
-      setPromotions(
-        promotions.map((p) =>
-          p.id === editingPromotion.id
-            ? ({
-                ...p,
-                ...formData,
-                modifiedAt: now,
-              } as Promotion)
-            : p,
-        ),
-      );
-      toast.success("Cập nhật khuyến mãi thành công");
-
-      // Log audit trail
-      console.log("Audit Log:", {
-        action: "UPDATE_PROMOTION",
-        promotionId: editingPromotion.id,
-        changes: formData,
-        user: adminUser?.email,
-        timestamp: now,
-      });
-    } else {
-      // Create new
-      const newPromotion: Promotion = {
-        ...(formData as Promotion),
-        id: `PROMO-${Date.now()}`,
-        usedCount: 0,
-        createdBy: adminUser?.email || "",
-        createdAt: now,
-      };
-      setPromotions([newPromotion, ...promotions]);
-      toast.success("Tạo khuyến mãi thành công");
-
-      // Log audit trail
-      console.log("Audit Log:", {
-        action: "CREATE_PROMOTION",
-        promotion: newPromotion,
-        user: adminUser?.email,
-        timestamp: now,
-      });
+    const payload: CreatePromotionPayload = {
+      title: formData.name ?? "",
+      description: formData.description ?? "",
+      code: formData.code ?? "",
+      discountPercent: formData.discountValue ?? 0,
+      startDate: (formData.startDate ?? new Date()).toISOString(),
+      endDate: (formData.endDate ?? new Date()).toISOString(),
+    };
+    try {
+      if (editingPromotion) {
+        await promotionApi.updatePromotion(Number(editingPromotion.id), payload);
+        toast.success("Cập nhật thành công");
+      } else {
+        await promotionApi.createPromotion(payload);
+        toast.success("Tạo khuyến mãi thành công");
+      }
+      setShowCreateForm(false); setEditingPromotion(null);
+      await fetchPromotions();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Lưu thất bại.");
     }
-
-    setShowCreateForm(false);
-    setEditingPromotion(null);
   };
 
   const filteredPromotions = promotions.filter((promo) => {
@@ -853,7 +905,7 @@ export default function PromotionManagement() {
                           className={cn(
                             "w-full justify-start text-left font-normal",
                             !formData.startDate &&
-                              "text-muted-foreground",
+                            "text-muted-foreground",
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -891,7 +943,7 @@ export default function PromotionManagement() {
                           className={cn(
                             "w-full justify-start text-left font-normal",
                             !formData.endDate &&
-                              "text-muted-foreground",
+                            "text-muted-foreground",
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -1245,14 +1297,14 @@ export default function PromotionManagement() {
                           )}
                           <div className="flex items-center gap-1">
                             {promo.discountType ===
-                            "percentage" ? (
+                              "percentage" ? (
                               <Percent className="w-4 h-4 text-gray-400" />
                             ) : (
                               <DollarSign className="w-4 h-4 text-gray-400" />
                             )}
                             <span className="font-semibold text-[#AF140B]">
                               {promo.discountType ===
-                              "percentage"
+                                "percentage"
                                 ? `${promo.discountValue}%`
                                 : `${promo.discountValue.toLocaleString()}đ`}
                             </span>
@@ -1296,6 +1348,12 @@ export default function PromotionManagement() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
+                      <Button variant="ghost" size="icon"
+                        title="Gán sản phẩm"
+                        onClick={() => openAssignDialog(promo)}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                        <Package className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1410,6 +1468,80 @@ export default function PromotionManagement() {
           </CardContent>
         </Card>
       </div>
+
+{/* Assign Products Modal */ }
+{
+    assignTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+                <div className="flex items-center justify-between p-5 border-b">
+                    <div>
+                        <h2 className="text-lg font-bold text-[#2C2C2C] flex items-center gap-2">
+                            <Package className="w-5 h-5 text-blue-600" />
+                            Gán sản phẩm vào khuyến mãi
+                        </h2>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                            {assignTarget.name} · đã chọn {selectedProductIds.size} sản phẩm
+                        </p>
+                    </div>
+                    <button onClick={() => setAssignTarget(null)}
+                        className="text-gray-400 hover:text-gray-600 text-2xl font-light leading-none">
+                        ×
+                    </button>
+                </div>
+                <div className="p-4 border-b">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            className="w-full pl-9 pr-3 h-9 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Tìm sản phẩm theo tên..."
+                            value={assignSearch}
+                            onChange={(e) => setAssignSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {products
+                        .filter((p) => p.name.toLowerCase().includes(assignSearch.toLowerCase()))
+                        .map((p, idx) => {
+                            const pid = idx + 1;
+                            const checked = selectedProductIds.has(pid);
+                            return (
+                                <label key={p.id}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${checked ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-blue-200"
+                                        }`}>
+                                    <input type="checkbox" checked={checked}
+                                        onChange={() => toggleProduct(pid)}
+                                        className="w-4 h-4 accent-blue-600" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-[#2C2C2C] truncate">{p.name}</p>
+                                        <p className="text-xs text-gray-500">{p.price?.toLocaleString("vi-VN")}₫</p>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                </div>
+                {assignError && (
+                    <div className="mx-4 mb-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />{assignError}
+                    </div>
+                )}
+                <div className="flex items-center justify-end gap-3 p-4 border-t">
+                    <Button variant="outline" onClick={() => setAssignTarget(null)} disabled={assigning}>
+                        Hủy
+                    </Button>
+                    <Button onClick={handleAssignProducts}
+                        disabled={selectedProductIds.size === 0 || assigning}
+                        className="bg-blue-600 hover:bg-blue-700 text-white">
+                        {assigning
+                            ? "Đang gán..."
+                            : `Gán${selectedProductIds.size > 0 ? ` ${selectedProductIds.size}` : ""} sản phẩm`}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    )
+}
     </div>
   );
 }

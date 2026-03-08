@@ -36,6 +36,14 @@ import DefectiveReport from './components/staff/DefectiveReport';
 
 // Manager
 import ManagerDashboard from './components/manager/ManagerDashboard';
+import FinancialOverview from './components/manager/FinancialOverview';
+import SkuPriceManagement from './components/manager/SkuPriceManagement';
+import ReviewManagement from './components/manager/ReviewManagement';
+import ImportOrderPage from './components/manager/ImportOrderPage';
+import InventoryManagementPage from './components/manager/InventoryManagementPage';
+import StockTransferPage from './components/manager/StockTransferPage';
+import PhysicalCountPage from './components/manager/PhysicalCountPage';
+import DefectiveReportPage from './components/manager/DefectiveReportPage';
 
 // Customer Account
 import CustomerDashboard from './components/customer/CustomerDashboard';
@@ -50,11 +58,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'staff' | 'manager')[] }) {
   const { adminUser } = useAdmin();
-  
+
   if (!adminUser) {
     return <Navigate to="/admin/login" />;
   }
-  
+
   if (!allowedRoles.includes(adminUser.role)) {
     if (adminUser.role === 'admin') {
       return <Navigate to="/admin/dashboard" />;
@@ -64,7 +72,7 @@ function AdminProtectedRoute({ children, allowedRoles }: { children: React.React
       return <Navigate to="/staff/dashboard" />;
     }
   }
-  
+
   return <>{children}</>;
 }
 
@@ -77,10 +85,10 @@ function AppContent() {
         <Routes>
           {/* Customer Routes */}
           <Route path="/login" element={<LoginPage />} />
-          
+
           {/* Admin/Staff/Manager Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
@@ -130,7 +138,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Manager Routes */}
           <Route
             path="/manager/dashboard"
@@ -160,7 +168,7 @@ function AppContent() {
             path="/manager/inventory"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
+                <InventoryManagementPage />
               </AdminProtectedRoute>
             }
           />
@@ -168,7 +176,7 @@ function AppContent() {
             path="/manager/storage"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
+                <InventoryManagementPage />
               </AdminProtectedRoute>
             }
           />
@@ -200,7 +208,7 @@ function AppContent() {
             path="/manager/stock-transfer"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <StoreTransfer />
+                <StockTransferPage />
               </AdminProtectedRoute>
             }
           />
@@ -208,7 +216,7 @@ function AppContent() {
             path="/manager/import-orders"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <StoreTransfer />
+                <ImportOrderPage />
               </AdminProtectedRoute>
             }
           />
@@ -224,7 +232,7 @@ function AppContent() {
             path="/manager/defective-report"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <DefectiveReport />
+                <DefectiveReportPage />
               </AdminProtectedRoute>
             }
           />
@@ -232,7 +240,7 @@ function AppContent() {
             path="/manager/physical-count"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <InventoryCheck />
+                <PhysicalCountPage />
               </AdminProtectedRoute>
             }
           />
@@ -264,7 +272,7 @@ function AppContent() {
             path="/manager/reviews"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <ProductManagement />
+                <ReviewManagement />
               </AdminProtectedRoute>
             }
           />
@@ -280,7 +288,15 @@ function AppContent() {
             path="/manager/financial"
             element={
               <AdminProtectedRoute allowedRoles={['manager']}>
-                <AdminDashboard />
+                <FinancialOverview />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/sku-price"
+            element={
+              <AdminProtectedRoute allowedRoles={['manager']}>
+                <SkuPriceManagement />
               </AdminProtectedRoute>
             }
           />
@@ -292,7 +308,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Staff Routes */}
           <Route
             path="/staff/dashboard"
@@ -358,7 +374,7 @@ function AppContent() {
               </AdminProtectedRoute>
             }
           />
-          
+
           {/* Customer Site Routes */}
           <Route
             path="/*"
