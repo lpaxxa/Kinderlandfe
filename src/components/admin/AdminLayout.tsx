@@ -23,23 +23,11 @@ export default function AdminLayout() {
   // Sidebar navigation items
   const sidebarItems = [
     {
-      section: 'Tổng quan',
-      items: [
-        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
-      ]
-    },
-    {
       section: 'Sản phẩm & Danh mục',
       items: [
         { title: 'Quản lý Sản phẩm', icon: Package, path: '/admin/products' },
         { title: 'Quản lý Danh mục', icon: Package, path: '/admin/categories' },
-      ]
-    },
-    {
-      section: 'Đơn hàng',
-      items: [
-        { title: 'Quản lý Đơn hàng', icon: ShoppingCart, path: '/admin/orders' },
-        { title: 'Xử lý Hoàn trả', icon: ClipboardList, path: '/admin/returns' },
+        { title: 'Quản lý Thương hiệu', icon: Package, path: '/admin/brands' },
       ]
     },
     {
@@ -52,27 +40,18 @@ export default function AdminLayout() {
       ]
     },
     {
-      section: 'Người dùng & Phân quyền',
+      section: 'Tài khoản',
       items: [
-        { title: 'Quản lý Người dùng', icon: Users, path: '/admin/users' },
-        { title: 'Quản lý Phân quyền', icon: Shield, path: '/admin/permissions' },
-        { title: 'Thêm Quyền cho Role', icon: UserPlus, path: '/admin/role-permissions' },
+        { title: 'Quản lý Tài khoản', icon: Users, path: '/admin/users' },
       ]
     },
     {
       section: 'Báo cáo & Tài chính',
       items: [
-        { title: 'Dashboard Tổng quan', icon: Activity, path: '/admin/overview' },
+        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
         { title: 'Báo cáo Chi tiết', icon: BarChart3, path: '/admin/reports' },
         { title: 'Quản lý Tài chính', icon: DollarSign, path: '/admin/financial' },
         { title: 'Tồn kho', icon: Store, path: '/admin/inventory' },
-      ]
-    },
-    {
-      section: 'Cài đặt',
-      items: [
-        { title: 'Đổi Mật khẩu', icon: LockKeyhole, path: '/admin/change-password' },
-        { title: 'Cài đặt Hệ thống', icon: Settings, path: '/admin/settings' },
       ]
     },
   ];
@@ -128,9 +107,8 @@ export default function AdminLayout() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`bg-[#AF140B] overflow-y-auto transition-all duration-300 flex-shrink-0 ${
-            sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
-          }`}
+          className={`bg-[#AF140B] overflow-y-auto transition-all duration-300 flex-shrink-0 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
+            }`}
           style={{ height: 'calc(100vh - 56px)' }}
         >
           <nav className="py-3">
@@ -146,15 +124,13 @@ export default function AdminLayout() {
                     <button
                       key={index}
                       onClick={() => navigate(item.path)}
-                      className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors group border-l-3 ${
-                        isActive
-                          ? 'bg-white/20 text-white border-white font-semibold'
-                          : 'text-white/90 hover:bg-white/15 hover:text-white border-transparent hover:border-white'
-                      }`}
+                      className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors group border-l-3 ${isActive
+                        ? 'bg-white/20 text-white border-white font-semibold'
+                        : 'text-white/90 hover:bg-white/15 hover:text-white border-transparent hover:border-white'
+                        }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                        isActive ? 'text-white' : 'text-white/60 group-hover:text-white'
-                      }`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'
+                        }`} />
                       <span className="truncate">{item.title}</span>
                     </button>
                   );

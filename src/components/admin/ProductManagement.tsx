@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -16,91 +15,121 @@ import {
   Search,
   Edit,
   Trash2,
-  Package,
-  DollarSign,
-  Tag,
+  RefreshCw,
   ImageIcon,
   MoreVertical,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
-import { products, type Product } from '../../data/products';
+import { toast } from 'sonner';
+import { productApi, Product as APIProduct } from '../../services/productApi';
+import { brandApi, Brand } from '../../services/brandApi';
+import { categoryApi, Category } from '../../services/categoryApi';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-
-const categories = [
-  'Mô hình & Robot',
-  'LEGO & Xếp hình',
-  'Búp bê & Nhà búp bê',
-  'Đồ chơi giáo dục',
-  'Xe điều khiển',
-  'Đồ chơi vận động',
-  'Board Game',
-  'Đồ chơi âm nhạc',
-  'Nhồi bông',
-  'Đồ chơi STEM',
-  'Đồ chơi mô phỏng',
-  'Đồ chơi sáng tạo',
-  'Puzzle',
-  'Đồ chơi ngoài trời',
-  'Đồ chơi tắm',
-  'Đồ chơi em bé',
-  'Figure & Collectible',
-];
-
-const brands = [
-  'Hasbro', 'LEGO', 'Mattel', 'Bandai', 'Disney', 
-  'Fisher-Price', 'VTech', 'Ravensburger', 'Playmobil',
-  'Nerf', 'Barbie', 'Hot Wheels', 'Robocar Poli',
-  'Play-Doh', 'Marvel', 'Pokémon', 'My Little Pony',
-  'Transformers', 'Melissa & Doug', 'Baby Alive',
-];
 
 export default function ProductManagement() {
   const navigate = useNavigate();
+  const [productList, setProductList] = useState<APIProduct[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBrand, setFilterBrand] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
+  const [editingProduct, setEditingProduct] = useState<APIProduct | null>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    category: '',
-    brand: '',
-    stock: '',
+    categoryId: '',
+    brandId: '',
+    stock: '0',
     description: '',
-    image: '',
+    imageUrl: '',
   });
 
-  const filteredProducts = products.filter((product) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [prods, cats, brnds] = await Promise.all([
+        productApi.getAll(),
+        categoryApi.getAll(),
+        brandApi.getAll()
+      ]);
+      setProductList(prods || []);
+      setCategories(cats || []);
+      setBrands(brnds || []);
+    } catch (error) {
+      console.error('Failed to fetch product data:', error);
+      toast.error('Không thể tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filteredProducts = productList.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.brand.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-    const matchesBrand = filterBrand === 'all' || product.brand === filterBrand;
+      (product.brandName && product.brandName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = filterCategory === 'all' || product.categoryName === filterCategory;
+    const matchesBrand = filterBrand === 'all' || product.brandName === filterBrand;
     return matchesSearch && matchesCategory && matchesBrand;
   });
 
-  const handleAddProduct = () => {
-    if (!formData.name || !formData.price || !formData.category || !formData.brand) {
+  const handleAddProduct = async () => {
+    if (!formData.name || !formData.price || !formData.categoryId || !formData.brandId) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    toast.success('Thêm sản phẩm thành công!');
-    setIsAddDialogOpen(false);
-    resetForm();
+    try {
+      await productApi.create({
+        name: formData.name,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        categoryId: Number(formData.categoryId),
+        brandId: Number(formData.brandId)
+      });
+      toast.success('Thêm sản phẩm thành công!');
+      setIsAddDialogOpen(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      toast.error('Thêm sản phẩm thất bại');
+    }
   };
 
-  const handleUpdateProduct = () => {
-    toast.success('Cập nhật sản phẩm thành công!');
-    setEditingProduct(null);
-    resetForm();
+  const handleUpdateProduct = async () => {
+    if (!editingProduct) return;
+    try {
+      await productApi.update(editingProduct.id, {
+        name: formData.name,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        categoryId: Number(formData.categoryId),
+        brandId: Number(formData.brandId)
+      });
+      toast.success('Cập nhật sản phẩm thành công!');
+      setEditingProduct(null);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      toast.error('Cập nhật sản phẩm thất bại');
+    }
   };
 
-  const handleDeleteProduct = (product: Product) => {
+  const handleDeleteProduct = async (product: APIProduct) => {
     if (confirm(`Bạn có chắc muốn xóa sản phẩm "${product.name}"?`)) {
-      toast.success('Đã xóa sản phẩm');
+      try {
+        await productApi.delete(product.id);
+        toast.success('Đã xóa sản phẩm');
+        fetchData();
+      } catch (error) {
+        toast.error('Xóa sản phẩm thất bại');
+      }
     }
   };
 
@@ -108,24 +137,27 @@ export default function ProductManagement() {
     setFormData({
       name: '',
       price: '',
-      category: '',
-      brand: '',
-      stock: '',
+      categoryId: '',
+      brandId: '',
+      stock: '0',
       description: '',
-      image: '',
+      imageUrl: '',
     });
   };
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = (product: APIProduct) => {
     setEditingProduct(product);
+    const cat = categories.find(c => c.name === product.categoryName);
+    const brnd = brands.find(b => b.name === product.brandName);
+
     setFormData({
       name: product.name,
-      price: product.price.toString(),
-      category: product.category,
-      brand: product.brand,
-      stock: product.stock.toString(),
-      description: product.description,
-      image: product.image,
+      price: product.minPrice ? product.minPrice.toString() : '0',
+      categoryId: cat ? cat.id.toString() : '',
+      brandId: brnd ? brnd.id.toString() : '',
+      stock: '0',
+      description: product.description || '',
+      imageUrl: product.imageUrl || '',
     });
   };
 
@@ -177,26 +209,26 @@ export default function ProductManagement() {
                     </div>
                     <div>
                       <Label htmlFor="category">Danh mục *</Label>
-                      <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                      <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn danh mục" />
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label htmlFor="brand">Thương hiệu *</Label>
-                      <Select value={formData.brand} onValueChange={(value) => setFormData({ ...formData, brand: value })}>
+                      <Select value={formData.brandId} onValueChange={(value) => setFormData({ ...formData, brandId: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn thương hiệu" />
                         </SelectTrigger>
                         <SelectContent>
                           {brands.map((brand) => (
-                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                            <SelectItem key={brand.id} value={brand.id.toString()}>{brand.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -222,11 +254,11 @@ export default function ProductManagement() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor="image">URL hình ảnh</Label>
+                      <Label htmlFor="imageUrl">URL hình ảnh</Label>
                       <Input
-                        id="image"
-                        value={formData.image}
-                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                        id="imageUrl"
+                        value={formData.imageUrl}
+                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                         placeholder="https://..."
                       />
                     </div>
@@ -283,7 +315,7 @@ export default function ProductManagement() {
                   <SelectContent>
                     <SelectItem value="all">Tất cả danh mục</SelectItem>
                     {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -297,7 +329,7 @@ export default function ProductManagement() {
                   <SelectContent>
                     <SelectItem value="all">Tất cả thương hiệu</SelectItem>
                     {brands.map((brand) => (
-                      <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      <SelectItem key={brand.id} value={brand.name}>{brand.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -329,67 +361,88 @@ export default function ProductManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-gray-500">ID: {product.id}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell>{product.brand}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {product.price.toLocaleString()}đ
-                    </TableCell>
-                    <TableCell className="text-center font-medium">
-                      {product.stock}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getStockBadge(product.stock)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(product)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Chỉnh sửa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteProduct(product)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Xóa
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-48 text-center text-gray-500">
+                      <RefreshCw className="w-8 h-8 mx-auto animate-spin mb-2" />
+                      Đang tải danh sách sản phẩm...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-48 text-center text-gray-500">
+                      Không tìm thấy sản phẩm nào
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden border">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+                              <ImageIcon className="w-6 h-6" />
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-xs text-gray-500">ID: {product.id}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.categoryName}</Badge>
+                      </TableCell>
+                      <TableCell>{product.brandName}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {product.minPrice?.toLocaleString()}đ
+                      </TableCell>
+                      <TableCell className="text-center font-medium">
+                        0
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {getStockBadge(0)}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(product)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Chỉnh sửa
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteProduct(product)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Xóa
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
         {/* Edit Dialog */}
-        <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <Dialog open={!!editingProduct} onOpenChange={(open: boolean) => !open && setEditingProduct(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Chỉnh sửa sản phẩm</DialogTitle>
@@ -409,26 +462,26 @@ export default function ProductManagement() {
                 </div>
                 <div>
                   <Label htmlFor="edit-category">Danh mục *</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="edit-brand">Thương hiệu *</Label>
-                  <Select value={formData.brand} onValueChange={(value) => setFormData({ ...formData, brand: value })}>
+                  <Select value={formData.brandId} onValueChange={(value) => setFormData({ ...formData, brandId: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {brands.map((brand) => (
-                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                        <SelectItem key={brand.id} value={brand.id.toString()}>{brand.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -449,6 +502,14 @@ export default function ProductManagement() {
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="edit-imageUrl">URL hình ảnh</Label>
+                  <Input
+                    id="edit-imageUrl"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   />
                 </div>
                 <div className="col-span-2">
