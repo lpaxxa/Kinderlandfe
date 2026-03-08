@@ -23,6 +23,12 @@ export default function AdminLayout() {
   // Sidebar navigation items
   const sidebarItems = [
     {
+      section: 'Admin',
+      items: [
+        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
+      ]
+    },
+    {
       section: 'Tổng quan',
       items: [
         { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
@@ -128,9 +134,8 @@ export default function AdminLayout() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`bg-[#AF140B] overflow-y-auto transition-all duration-300 flex-shrink-0 ${
-            sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
-          }`}
+          className={`bg-[#AF140B] overflow-y-auto transition-all duration-300 flex-shrink-0 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
+            }`}
           style={{ height: 'calc(100vh - 56px)' }}
         >
           <nav className="py-3">
@@ -146,15 +151,13 @@ export default function AdminLayout() {
                     <button
                       key={index}
                       onClick={() => navigate(item.path)}
-                      className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors group border-l-3 ${
-                        isActive
-                          ? 'bg-white/20 text-white border-white font-semibold'
-                          : 'text-white/90 hover:bg-white/15 hover:text-white border-transparent hover:border-white'
-                      }`}
+                      className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors group border-l-3 ${isActive
+                        ? 'bg-white/20 text-white border-white font-semibold'
+                        : 'text-white/90 hover:bg-white/15 hover:text-white border-transparent hover:border-white'
+                        }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                        isActive ? 'text-white' : 'text-white/60 group-hover:text-white'
-                      }`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'
+                        }`} />
                       <span className="truncate">{item.title}</span>
                     </button>
                   );
