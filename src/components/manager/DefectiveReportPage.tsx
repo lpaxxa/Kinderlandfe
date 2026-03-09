@@ -1,31 +1,28 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import {
-    AlertTriangle, ArrowLeft, LogOut, RefreshCw,
+    AlertTriangle, RefreshCw,
     AlertCircle, CheckCircle, Loader2, Package,
-    Trash2, Plus, FileText, Calendar,
+    Trash2, Search, ChevronLeft, ChevronRight, Calendar,
 } from 'lucide-react';
 import { inventoryApi, InventoryItem } from '../../services/inventoryApi';
 import { useStoreId } from '../../hooks/useStoreId';
 
 type ReasonType = 'broken' | 'cancelled' | 'expired' | 'lost' | 'other';
 
-interface DisposeEntry {
-    id: string;
+interface SubmittedRecord {
     item: InventoryItem;
-    quantity: string;
+    quantity: number;
     reason: ReasonType;
     note: string;
-    submitting: boolean;
-    submitted: boolean;
-    error: string | null;
-    submittedAt?: Date;
+    submittedAt: Date;
 }
 
 const REASONS: { value: ReasonType; label: string; icon: string }[] = [
@@ -36,9 +33,10 @@ const REASONS: { value: ReasonType; label: string; icon: string }[] = [
     { value: 'other', label: 'Lý do khác', icon: '📋' },
 ];
 
+const PAGE_SIZE = 10;
+
 export default function DefectiveReportPage() {
-    const navigate = useNavigate();
-    const { adminUser, logoutAdmin } = useAdmin();
+    const { adminUser } = useAdmin();
 
     // Inventory list
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -46,19 +44,41 @@ export default function DefectiveReportPage() {
     const [invError, setInvError] = useState<string | null>(null);
 
     // StoreId
-    const { storeId, setStoreId } = useStoreId();
-    const [storeIdInput, setStoreIdInput] = useState(storeId ?? '');
+    const { storeId } = useStoreId();
 
-    // Search
+    // Search & Pagination
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
 
-    // Report entries
-    const [entries, setEntries] = useState<DisposeEntry[]>([]);
+    // Dialog state
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+    const [dQty, setDQty] = useState('1');
+    const [dReason, setDReason] = useState<ReasonType>('broken');
+    const [dNote, setDNote] = useState('');
+    const [dSubmitting, setDSubmitting] = useState(false);
+    const [dError, setDError] = useState<string | null>(null);
+    const [dSuccess, setDSuccess] = useState(false);
 
-    const handleLogout = () => { logoutAdmin(); navigate('/admin/login'); };
+    // History of submitted records — persisted in localStorage
+    const HISTORY_KEY = 'defective_report_history';
+    const [history, setHistory] = useState<SubmittedRecord[]>(() => {
+        try {
+            const saved = localStorage.getItem(HISTORY_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return parsed.map((r: SubmittedRecord & { submittedAt: string }) => ({
+                    ...r,
+                    submittedAt: new Date(r.submittedAt),
+                }));
+            }
+        } catch { /* ignore */ }
+        return [];
+    });
 
-    const fetchInventory = async (sid?: string) => {
-        const effectiveId = sid ?? storeId ?? '';
+    const fetchInventory = async () => {
+        const effectiveId = storeId ?? '';
+        if (!effectiveId) return;
         setLoadingInv(true);
         setInvError(null);
         try {
@@ -71,85 +91,84 @@ export default function DefectiveReportPage() {
         }
     };
 
-    const applyStoreId = () => {
-        const trimmed = storeIdInput.trim();
-        if (!trimmed) return;
-        setStoreId(trimmed);
-        fetchInventory(trimmed);
-    };
-
     useEffect(() => { if (storeId) fetchInventory(); }, [storeId]);
 
+    // Filter
     const filtered = inventory.filter((item) => {
         const q = search.toLowerCase();
-        return item.storeName.toLowerCase().includes(q) ||
+        return (item.productName || '').toLowerCase().includes(q) ||
             item.skuCode.toLowerCase().includes(q) ||
             String(item.skuId).includes(q);
     });
 
-    const addEntry = (item: InventoryItem) => {
-        // Avoid duplicate pending entries for same item
-        const exists = entries.some(e => e.item.id === item.id && !e.submitted);
-        if (exists) return;
-        const entry: DisposeEntry = {
-            id: `${Date.now()}-${item.id}`,
-            item,
-            quantity: '1',
-            reason: 'broken',
-            note: '',
-            submitting: false,
-            submitted: false,
-            error: null,
-        };
-        setEntries(prev => [entry, ...prev]);
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+    // Reset page when search changes
+    useEffect(() => { setPage(1); }, [search]);
+
+    // Open dialog
+    const openDialog = (item: InventoryItem) => {
+        setSelectedItem(item);
+        setDQty('1');
+        setDReason('broken');
+        setDNote('');
+        setDError(null);
+        setDSuccess(false);
+        setDialogOpen(true);
     };
 
-    const updateEntry = <K extends keyof DisposeEntry>(id: string, key: K, val: DisposeEntry[K]) => {
-        setEntries(prev => prev.map(e => e.id === id ? { ...e, [key]: val, error: null } : e));
-    };
-
-    const removeEntry = (id: string) => {
-        setEntries(prev => prev.filter(e => e.id !== id));
-    };
-
-    const submitEntry = async (entry: DisposeEntry) => {
-        const qty = parseInt(entry.quantity, 10);
+    // Submit dispose
+    const handleSubmit = async () => {
+        if (!selectedItem) return;
+        const qty = parseInt(dQty, 10);
         if (isNaN(qty) || qty <= 0) {
-            setEntries(prev => prev.map(e => e.id === entry.id
-                ? { ...e, error: 'Số lượng phải > 0.' } : e));
+            setDError('Số lượng phải > 0.');
             return;
         }
-        if (qty > entry.item.quantity) {
-            setEntries(prev => prev.map(e => e.id === entry.id
-                ? { ...e, error: `Không thể thanh lý nhiều hơn tồn kho (${entry.item.quantity}).` } : e));
+        if (qty > selectedItem.quantity) {
+            setDError(`Không thể thanh lý nhiều hơn tồn kho (${selectedItem.quantity}).`);
             return;
         }
-        setEntries(prev => prev.map(e => e.id === entry.id
-            ? { ...e, submitting: true, error: null } : e));
+        setDSubmitting(true);
+        setDError(null);
         try {
-            await inventoryApi.disposeInventory(entry.item.storeId, entry.item.skuId, qty);
-            setEntries(prev => prev.map(e => e.id === entry.id
-                ? { ...e, submitting: false, submitted: true, submittedAt: new Date() } : e));
+            await inventoryApi.disposeInventory(selectedItem.storeId, selectedItem.skuId, qty);
+            setDSuccess(true);
+            const newRecord: SubmittedRecord = {
+                item: selectedItem,
+                quantity: qty,
+                reason: dReason,
+                note: dNote,
+                submittedAt: new Date(),
+            };
+            setHistory(prev => {
+                const updated = [newRecord, ...prev];
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+                return updated;
+            });
+            // Refresh inventory
+            fetchInventory();
+            // Auto-close after short delay
+            setTimeout(() => {
+                setDialogOpen(false);
+                setDSuccess(false);
+            }, 1200);
         } catch (err: unknown) {
-            setEntries(prev => prev.map(e => e.id === entry.id
-                ? { ...e, submitting: false, error: err instanceof Error ? err.message : 'Thanh lý thất bại.' } : e));
+            setDError(err instanceof Error ? err.message : 'Thanh lý thất bại.');
+        } finally {
+            setDSubmitting(false);
         }
     };
-
-    const submitAll = async () => {
-        const pending = entries.filter(e => !e.submitted && !e.submitting);
-        for (const e of pending) await submitEntry(e);
-    };
-
-    const pendingCount = entries.filter(e => !e.submitted).length;
-    const doneCount = entries.filter(e => e.submitted).length;
 
     return (
         <div className="min-h-full bg-white">
 
             {/* Header */}
             <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center justify-between flex-wrap gap-3">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
@@ -157,250 +176,329 @@ export default function DefectiveReportPage() {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold text-[#2C2C2C]">Báo Cáo Hàng Lỗi</h1>
-                                <p className="text-sm text-gray-600">{adminUser?.name} · {adminUser?.storeName || 'Quản lý kho'}</p>
+                                <p className="text-sm text-gray-600">{adminUser?.storeName || 'Cửa hàng'} · Thanh lý sản phẩm lỗi</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                            {pendingCount > 0 && (
-                                <Button onClick={submitAll} className="bg-orange-600 hover:bg-orange-700">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Gửi tất cả ({pendingCount})
-                                </Button>
-                            )}
-                            <Button variant="outline" onClick={fetchInventory} disabled={loadingInv} className="border-gray-300">
-                                <RefreshCw className={`w-4 h-4 mr-2 ${loadingInv ? 'animate-spin' : ''}`} />
-                                Tải lại
-                            </Button>
-                            <Button variant="outline" onClick={() => navigate('/manager/dashboard')} className="border-gray-300">
-                                <ArrowLeft className="w-4 h-4 mr-2" />Quay lại
-                            </Button>
-                            <Button variant="outline" onClick={handleLogout}
-                                className="border-[#AF140B] text-[#AF140B] hover:bg-[#AF140B] hover:text-white">
-                                <LogOut className="w-4 h-4 mr-2" />Đăng xuất
-                            </Button>
-                        </div>
+                        <Button variant="outline" onClick={fetchInventory} disabled={loadingInv} className="border-gray-300">
+                            <RefreshCw className={`w-4 h-4 mr-2 ${loadingInv ? 'animate-spin' : ''}`} />
+                            Tải lại
+                        </Button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {[
-                        { label: 'Mục chờ gửi', value: pendingCount, color: 'text-orange-600', border: 'border-orange-200' },
-                        { label: 'Đã thanh lý', value: doneCount, color: 'text-green-700', border: 'border-green-200' },
-                        { label: 'Tổng SKU kho', value: inventory.length, color: 'text-blue-700', border: 'border-blue-200' },
-                    ].map((s, i) => (
-                        <Card key={i} className={`bg-white border ${s.border} shadow-sm`}>
-                            <CardContent className="p-4">
-                                <p className="text-xs text-gray-500 mb-1">{s.label}</p>
-                                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-6">
-
-                    {/* Left: inventory picker */}
-                    <Card className="border border-gray-200 shadow-sm bg-white">
-                        <CardHeader>
-                            <CardTitle className="text-base text-[#2C2C2C]">Chọn sản phẩm cần thanh lý</CardTitle>
-                            <CardDescription>Tìm và nhấn <strong>+ Thêm</strong> để đưa vào báo cáo</CardDescription>
-                            {!storeId && (
-                                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 rounded-lg p-2 mt-2">
-                                    <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
-                                    <Input type="number" min={1} placeholder="Nhập Store ID…"
-                                        value={storeIdInput}
-                                        onChange={(e) => setStoreIdInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && applyStoreId()}
-                                        className="h-7 text-xs flex-1" />
-                                    <Button size="sm" onClick={applyStoreId} disabled={!storeIdInput}
-                                        className="h-7 text-xs bg-yellow-600 hover:bg-yellow-700 text-white">
-                                        OK
-                                    </Button>
-                                </div>
+                <Tabs defaultValue="dispose" className="w-full">
+                    <TabsList className="w-full !bg-transparent p-0 !rounded-none gap-4 !h-auto">
+                        <TabsTrigger value="dispose" className="flex-1 !border-2 !border-gray-600 !bg-gray-600 !text-white data-[state=active]:!border-orange-600 data-[state=active]:!bg-orange-600 data-[state=active]:!text-white data-[state=active]:!shadow-lg !rounded-xl text-sm !font-semibold !py-3 !px-4 transition-all">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Thanh lý hàng lỗi
+                        </TabsTrigger>
+                        <TabsTrigger value="history" className="flex-1 !border-2 !border-gray-600 !bg-gray-600 !text-white data-[state=active]:!border-green-600 data-[state=active]:!bg-green-600 data-[state=active]:!text-white data-[state=active]:!shadow-lg !rounded-xl text-sm !font-semibold !py-3 !px-4 transition-all">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Lịch sử thanh lý
+                            {history.length > 0 && (
+                                <Badge className="ml-2 bg-green-600 text-white text-[10px] px-1.5 py-0">{history.length}</Badge>
                             )}
-                            <div className="relative mt-1">
-                                <Input placeholder="Tìm theo cửa hàng, SKU Code, SKU ID…"
-                                    value={search} onChange={(e) => setSearch(e.target.value)} />
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {invError && (
-                                <div className="flex items-center gap-2 text-red-600 text-sm px-4 py-3">
-                                    <AlertCircle className="w-4 h-4" />{invError}
-                                </div>
-                            )}
-                            <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-100">
-                                {loadingInv && Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} className="px-4 py-3 flex gap-3 animate-pulse">
-                                        <div className="flex-1">
-                                            <div className="h-3 bg-gray-200 rounded w-3/5 mb-1.5" />
-                                            <div className="h-3 bg-gray-100 rounded w-2/5" />
-                                        </div>
-                                        <div className="h-8 w-16 bg-gray-100 rounded" />
-                                    </div>
-                                ))}
-                                {!loadingInv && filtered.length === 0 && (
-                                    <div className="py-10 text-center text-gray-400 text-sm">
-                                        <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                        Không tìm thấy sản phẩm.
-                                    </div>
-                                )}
-                                {!loadingInv && filtered.map((item) => {
-                                    const alreadyAdded = entries.some(e => e.item.id === item.id && !e.submitted);
-                                    return (
-                                        <div key={item.id} className="px-4 py-3 flex items-center gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm text-[#2C2C2C] truncate">{item.storeName}</p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <Badge variant="outline" className="font-mono text-xs">{item.skuCode}</Badge>
-                                                    <span className={`text-xs font-semibold ${item.quantity === 0 ? 'text-red-600' : item.quantity <= 5 ? 'text-yellow-600' : 'text-green-700'}`}>
-                                                        Tồn: {item.quantity}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <Button size="sm" variant="outline"
-                                                onClick={() => addEntry(item)}
-                                                disabled={alreadyAdded || item.quantity === 0}
-                                                className="h-8 border-orange-300 text-orange-700 hover:bg-orange-50 shrink-0">
-                                                <Plus className="w-3 h-3 mr-1" />
-                                                {alreadyAdded ? 'Đã thêm' : 'Thêm'}
-                                            </Button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </TabsTrigger>
+                    </TabsList>
 
-                    {/* Right: report entries */}
-                    <div className="space-y-4">
-                        <h2 className="font-bold text-[#2C2C2C] flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-orange-600" />
-                            Danh sách báo cáo
-                            {entries.length > 0 && <Badge className="bg-orange-600 text-white">{entries.length}</Badge>}
-                        </h2>
-
-                        {entries.length === 0 && (
-                            <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 py-14 text-center text-gray-400">
-                                <AlertTriangle className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                                <p className="text-sm">Chưa có mục nào. Chọn sản phẩm bên trái để thêm.</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                            {entries.map((entry) => (
-                                <Card key={entry.id}
-                                    className={`border shadow-sm ${entry.submitted ? 'border-green-300 bg-green-50' : entry.error ? 'border-red-300' : 'border-orange-200'}`}>
-                                    <CardContent className="p-4 space-y-3">
-                                        {/* Item info */}
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <p className="font-semibold text-sm text-[#2C2C2C]">{entry.item.storeName}</p>
-                                                <div className="flex gap-2 mt-0.5">
-                                                    <Badge variant="outline" className="font-mono text-xs">{entry.item.skuCode}</Badge>
-                                                    <span className="text-xs text-gray-500">Tồn kho: {entry.item.quantity}</span>
-                                                </div>
-                                            </div>
-                                            {entry.submitted ? (
-                                                <div className="flex items-center gap-1 text-green-700 text-xs">
-                                                    <CheckCircle className="w-4 h-4" />
-                                                    Đã thanh lý
-                                                </div>
-                                            ) : (
-                                                <Button size="sm" variant="ghost"
-                                                    onClick={() => removeEntry(entry.id)}
-                                                    className="h-7 w-7 p-0 text-gray-400 hover:text-red-600">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {!entry.submitted && (
-                                            <>
-                                                {/* Quantity + Reason */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <Label className="text-xs mb-1 block">
-                                                            Số lượng thanh lý <span className="text-[#AF140B]">*</span>
-                                                        </Label>
-                                                        <Input type="number" min={1} max={entry.item.quantity}
-                                                            value={entry.quantity}
-                                                            onChange={(e) => updateEntry(entry.id, 'quantity', e.target.value)}
-                                                            className="h-8 text-sm"
-                                                            disabled={entry.submitting} />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs mb-1 block">Lý do</Label>
-                                                        <select
-                                                            value={entry.reason}
-                                                            onChange={(e) => updateEntry(entry.id, 'reason', e.target.value as ReasonType)}
-                                                            disabled={entry.submitting}
-                                                            className="w-full h-8 rounded-md border border-gray-300 text-sm px-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
-                                                            {REASONS.map(r => (
-                                                                <option key={r.value} value={r.value}>
-                                                                    {r.icon} {r.label}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                {/* Note */}
-                                                <div>
-                                                    <Label className="text-xs mb-1 block">Ghi chú</Label>
-                                                    <Input placeholder="Mô tả chi tiết tình trạng hàng…"
-                                                        value={entry.note}
-                                                        onChange={(e) => updateEntry(entry.id, 'note', e.target.value)}
-                                                        className="h-8 text-sm"
-                                                        disabled={entry.submitting} />
-                                                </div>
-
-                                                {/* Error */}
-                                                {entry.error && (
-                                                    <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 rounded-lg p-2">
-                                                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                                        {entry.error}
-                                                    </div>
-                                                )}
-
-                                                <Button size="sm" onClick={() => submitEntry(entry)}
-                                                    disabled={entry.submitting}
-                                                    className="w-full bg-orange-600 hover:bg-orange-700 h-8">
-                                                    {entry.submitting
-                                                        ? <><Loader2 className="w-3 h-3 mr-2 animate-spin" />Đang gửi...</>
-                                                        : <><Trash2 className="w-3 h-3 mr-2" />Xác nhận thanh lý</>}
-                                                </Button>
-                                            </>
-                                        )}
-
-                                        {/* Submitted summary */}
-                                        {entry.submitted && (
-                                            <div className="text-xs text-green-700 flex items-center gap-3">
-                                                <span>Số lượng: <strong>{entry.quantity}</strong></span>
-                                                <span>·</span>
-                                                <span>Lý do: <strong>{REASONS.find(r => r.value === entry.reason)?.label}</strong></span>
-                                                {entry.submittedAt && (
-                                                    <>
-                                                        <span>·</span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Calendar className="w-3 h-3" />
-                                                            {entry.submittedAt.toLocaleTimeString('vi-VN')}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
+                    {/* Tab 1: Dispose */}
+                    <TabsContent value="dispose" className="mt-4 space-y-4">
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {[
+                                { label: 'Tổng SKU kho', value: inventory.length, color: 'text-blue-700', border: 'border-blue-200' },
+                                { label: 'Hết hàng', value: inventory.filter(i => i.quantity === 0).length, color: 'text-red-600', border: 'border-red-300' },
+                                { label: 'Kết quả tìm kiếm', value: filtered.length, color: 'text-orange-600', border: 'border-orange-200' },
+                            ].map((s, i) => (
+                                <Card key={i} className={`bg-white border ${s.border} shadow-sm`}>
+                                    <CardContent className="p-4">
+                                        <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+                                        <p className={`text-2xl font-bold ${s.color}`}>{loadingInv ? '…' : s.value}</p>
                                     </CardContent>
                                 </Card>
                             ))}
                         </div>
-                    </div>
-                </div>
+
+                        {/* Inventory Table */}
+                        <Card className="border border-gray-200 shadow-sm bg-white">
+                            <CardHeader>
+                                <div className="flex items-center justify-between gap-4 flex-wrap">
+                                    <div>
+                                        <CardTitle className="text-lg text-[#2C2C2C]">Chọn sản phẩm cần thanh lý</CardTitle>
+                                        <CardDescription>Nhấn <strong>Thanh lý</strong> để báo cáo hàng lỗi</CardDescription>
+                                    </div>
+                                    <div className="relative w-full sm:w-64">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <Input
+                                            placeholder="Tìm sản phẩm, SKU…"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="pl-9 h-9 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {invError && (
+                                    <div className="flex items-center gap-2 text-red-600 text-sm px-4 py-3">
+                                        <AlertCircle className="w-4 h-4" />{invError}
+                                    </div>
+                                )}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600">SKU Code</th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600">Tên sản phẩm</th>
+                                                <th className="px-4 py-3 text-center font-semibold text-gray-600 w-24">Tồn kho</th>
+                                                <th className="px-4 py-3 text-center font-semibold text-gray-600 w-28"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {loadingInv && Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse">
+                                                    <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded w-20" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded w-40" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded w-10 mx-auto" /></td>
+                                                    <td className="px-4 py-3"><div className="h-7 bg-gray-100 rounded w-20 mx-auto" /></td>
+                                                </tr>
+                                            ))}
+
+                                            {!loadingInv && paged.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={4} className="py-14 text-center text-gray-400">
+                                                        <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                        {inventory.length === 0 ? 'Chưa có dữ liệu tồn kho.' : 'Không tìm thấy sản phẩm.'}
+                                                    </td>
+                                                </tr>
+                                            )}
+
+                                            {!loadingInv && paged.map((item) => (
+                                                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-4 py-2.5">
+                                                        <Badge variant="outline" className="font-mono text-xs">{item.skuCode}</Badge>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 font-medium text-[#2C2C2C]">{item.productName || '—'}</td>
+                                                    <td className="px-4 py-2.5 text-center">
+                                                        <span className={`font-bold ${item.quantity === 0 ? 'text-red-600' : item.quantity <= 5 ? 'text-yellow-600' : 'text-green-700'}`}>
+                                                            {item.quantity}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-center">
+                                                        <Button size="sm" variant="outline"
+                                                            onClick={() => openDialog(item)}
+                                                            disabled={item.quantity === 0}
+                                                            className="h-7 text-xs border-orange-300 text-orange-700 hover:bg-orange-50">
+                                                            <Trash2 className="w-3 h-3 mr-1" />
+                                                            Thanh lý
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Pagination */}
+                                {!loadingInv && totalPages > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                                        <p className="text-xs text-gray-500">
+                                            Hiển thị {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} / {filtered.length} sản phẩm
+                                        </p>
+                                        <div className="flex items-center gap-1">
+                                            <Button size="sm" variant="outline" disabled={safePage <= 1}
+                                                onClick={() => setPage(p => p - 1)}
+                                                className="h-7 w-7 p-0">
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </Button>
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                                                .reduce<(number | 'dots')[]>((acc, p, idx, arr) => {
+                                                    if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push('dots');
+                                                    acc.push(p);
+                                                    return acc;
+                                                }, [])
+                                                .map((p, i) => p === 'dots' ? (
+                                                    <span key={`d${i}`} className="px-1 text-gray-400 text-xs">…</span>
+                                                ) : (
+                                                    <Button key={p} size="sm" variant={p === safePage ? 'default' : 'outline'}
+                                                        onClick={() => setPage(p)}
+                                                        className={`h-7 w-7 p-0 text-xs ${p === safePage ? 'bg-orange-600 hover:bg-orange-700 text-white' : ''}`}>
+                                                        {p}
+                                                    </Button>
+                                                ))}
+                                            <Button size="sm" variant="outline" disabled={safePage >= totalPages}
+                                                onClick={() => setPage(p => p + 1)}
+                                                className="h-7 w-7 p-0">
+                                                <ChevronRight className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Tab 2: History */}
+                    <TabsContent value="history" className="mt-4 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Card className="bg-white border border-green-200 shadow-sm">
+                                <CardContent className="p-4">
+                                    <p className="text-xs text-gray-500 mb-1">Tổng đã thanh lý</p>
+                                    <p className="text-2xl font-bold text-green-700">{history.length}</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-white border border-red-200 shadow-sm">
+                                <CardContent className="p-4">
+                                    <p className="text-xs text-gray-500 mb-1">Tổng SL thanh lý</p>
+                                    <p className="text-2xl font-bold text-red-600">{history.reduce((sum, r) => sum + r.quantity, 0)}</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Card className="border border-gray-200 shadow-sm bg-white">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                    Lịch sử thanh lý
+                                </CardTitle>
+                                <CardDescription>Danh sách các sản phẩm đã thanh lý trong phiên làm việc</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {history.length === 0 ? (
+                                    <div className="py-14 text-center text-gray-400">
+                                        <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                        <p className="text-sm">Chưa có mục nào được thanh lý.</p>
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-green-50 border-b border-green-100">
+                                            <tr>
+                                                <th className="px-4 py-2.5 text-left font-semibold text-gray-600 text-xs">Sản phẩm</th>
+                                                <th className="px-4 py-2.5 text-center font-semibold text-gray-600 text-xs w-16">SL</th>
+                                                <th className="px-4 py-2.5 text-left font-semibold text-gray-600 text-xs">Lý do</th>
+                                                <th className="px-4 py-2.5 text-left font-semibold text-gray-600 text-xs">Ghi chú</th>
+                                                <th className="px-4 py-2.5 text-right font-semibold text-gray-600 text-xs w-24">Thời gian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-green-50">
+                                            {history.map((rec, i) => (
+                                                <tr key={i} className="hover:bg-green-50/50">
+                                                    <td className="px-4 py-2.5">
+                                                        <span className="font-medium text-[#2C2C2C]">{rec.item.productName || rec.item.skuCode}</span>
+                                                        <Badge variant="outline" className="ml-2 font-mono text-[10px] px-1 py-0">{rec.item.skuCode}</Badge>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-center font-bold text-red-600">{rec.quantity}</td>
+                                                    <td className="px-4 py-2.5 text-xs">{REASONS.find(r => r.value === rec.reason)?.icon} {REASONS.find(r => r.value === rec.reason)?.label}</td>
+                                                    <td className="px-4 py-2.5 text-xs text-gray-500">{rec.note || '—'}</td>
+                                                    <td className="px-4 py-2.5 text-right text-xs text-gray-500">
+                                                        <span className="flex items-center justify-end gap-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            {rec.submittedAt.toLocaleTimeString('vi-VN')}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
+
+            {/* Dispose Dialog */}
+            <Dialog open={dialogOpen} onOpenChange={(open: boolean) => { if (!open && !dSubmitting) setDialogOpen(false); }}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-orange-700">Thanh lý hàng lỗi</DialogTitle>
+                        <DialogDescription>
+                            {selectedItem && (
+                                <span>
+                                    <strong>{selectedItem.productName || selectedItem.skuCode}</strong>
+                                    <Badge variant="outline" className="ml-2 font-mono text-[10px] px-1 py-0">{selectedItem.skuCode}</Badge>
+                                    <span className="ml-2 text-gray-500">· Tồn kho: <strong className="text-[#2C2C2C]">{selectedItem.quantity}</strong></span>
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {dSuccess ? (
+                        <div className="flex flex-col items-center gap-2 py-6">
+                            <CheckCircle className="w-12 h-12 text-green-600" />
+                            <p className="font-semibold text-green-700">Thanh lý thành công!</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 py-2">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="d-qty" className="text-xs mb-1 block">
+                                        Số lượng <span className="text-[#AF140B]">*</span>
+                                        {selectedItem && (
+                                            <span className="text-gray-400 font-normal ml-1">(max {selectedItem.quantity})</span>
+                                        )}
+                                    </Label>
+                                    <Input id="d-qty" type="number" min={1} max={selectedItem?.quantity}
+                                        value={dQty}
+                                        onChange={(e) => {
+                                            let val = e.target.value;
+                                            if (selectedItem && parseInt(val, 10) > selectedItem.quantity) {
+                                                val = String(selectedItem.quantity);
+                                            }
+                                            setDQty(val);
+                                            setDError(null);
+                                        }}
+                                        disabled={dSubmitting}
+                                        className="h-9" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs mb-1 block">Lý do</Label>
+                                    <select
+                                        value={dReason}
+                                        onChange={(e) => setDReason(e.target.value as ReasonType)}
+                                        disabled={dSubmitting}
+                                        className="w-full h-9 rounded-md border border-gray-300 text-sm px-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
+                                        {REASONS.map(r => (
+                                            <option key={r.value} value={r.value}>
+                                                {r.icon} {r.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="d-note" className="text-xs mb-1 block">Ghi chú</Label>
+                                <Input id="d-note" placeholder="Mô tả chi tiết tình trạng hàng…"
+                                    value={dNote}
+                                    onChange={(e) => setDNote(e.target.value)}
+                                    disabled={dSubmitting}
+                                    className="h-9" />
+                            </div>
+
+                            {dError && (
+                                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <AlertCircle className="w-4 h-4 flex-shrink-0" />{dError}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!dSuccess && (
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={dSubmitting}>Hủy</Button>
+                            <Button onClick={handleSubmit} disabled={dSubmitting}
+                                className="bg-orange-600 hover:bg-orange-700">
+                                {dSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                {dSubmitting ? 'Đang gửi…' : 'Xác nhận thanh lý'}
+                            </Button>
+                        </DialogFooter>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

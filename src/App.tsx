@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider, useAdmin } from './context/AdminContext';
@@ -21,7 +21,6 @@ import Payment from './components/checkout/Payment';
 import OrderSuccess from './components/checkout/OrderSuccess';
 
 // Admin & Staff
-import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminLayout from './components/admin/AdminLayout';
 import ProductManagement from './components/admin/ProductManagement';
@@ -39,13 +38,15 @@ import DefectiveReport from './components/staff/DefectiveReport';
 import ManagerDashboard from './components/manager/ManagerDashboard';
 import ManagerLayout from './components/manager/ManagerLayout';
 import FinancialOverview from './components/manager/FinancialOverview';
-import SkuPriceManagement from './components/manager/SkuPriceManagement';
+
 import ReviewManagement from './components/manager/ReviewManagement';
 import ImportOrderPage from './components/manager/ImportOrderPage';
 import InventoryManagementPage from './components/manager/InventoryManagementPage';
 import StockTransferPage from './components/manager/StockTransferPage';
 import PhysicalCountPage from './components/manager/PhysicalCountPage';
 import DefectiveReportPage from './components/manager/DefectiveReportPage';
+import ManagerOrderPage from './components/manager/ManagerOrderPage';
+import ManagerReturnPage from './components/manager/ManagerReturnPage';
 
 // Customer Account
 import CustomerDashboard from './components/customer/CustomerDashboard';
@@ -62,7 +63,7 @@ function AdminProtectedRoute({ children, allowedRoles }: { children: React.React
   const { adminUser } = useAdmin();
 
   if (!adminUser) {
-    return <Navigate to="/admin/login" />;
+    return <Navigate to="/login" />;
   }
 
   if (!allowedRoles.includes(adminUser.role)) {
@@ -88,8 +89,7 @@ function AppContent() {
           {/* Customer Routes */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Admin/Staff/Manager Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          {/* Admin/Staff/Manager use the same /login page */}
 
           {/* Admin Routes - wrapped in AdminLayout for persistent sidebar */}
           <Route
@@ -118,26 +118,17 @@ function AppContent() {
             }
           >
             <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="products" element={<ProductManagement />} />
-            <Route path="categories" element={<ProductManagement />} />
             <Route path="inventory" element={<InventoryManagementPage />} />
             <Route path="storage" element={<InventoryManagementPage />} />
-            <Route path="orders" element={<OrderManagement />} />
-            <Route path="create-order" element={<OrderManagement />} />
-            <Route path="returns" element={<ReturnManagement />} />
+            <Route path="returns" element={<ManagerReturnPage />} />
             <Route path="stock-transfer" element={<StockTransferPage />} />
             <Route path="import-orders" element={<ImportOrderPage />} />
             <Route path="import-management" element={<StoreTransfer />} />
             <Route path="defective-report" element={<DefectiveReportPage />} />
             <Route path="physical-count" element={<PhysicalCountPage />} />
-            <Route path="promotions" element={<PromotionManagement />} />
-            <Route path="blog" element={<ProductManagement />} />
-            <Route path="policies" element={<ProductManagement />} />
+            <Route path="orders" element={<ManagerOrderPage />} />
             <Route path="reviews" element={<ReviewManagement />} />
-            <Route path="reports" element={<AdminDashboard />} />
             <Route path="financial" element={<FinancialOverview />} />
-            <Route path="sku-price" element={<SkuPriceManagement />} />
-            <Route path="change-password" element={<CustomerProfile />} />
           </Route>
 
           {/* Staff Routes */}

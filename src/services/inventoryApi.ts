@@ -15,6 +15,7 @@ export interface StoreAvailability {
     openingTime: string;
     closingTime: string;
     availabilityStatus: string;
+    quantity?: number;
 }
 
 export interface InventoryAvailabilityResponse {
@@ -31,6 +32,7 @@ export interface InventoryItem {
     id: number;
     skuId: number;
     skuCode: string;
+    productName: string;
     quantity: number;
     storeId: number;
     storeName: string;
@@ -111,17 +113,13 @@ export const inventoryApi = {
 
     /**
      * Điều chỉnh số lượng tồn kho
-     * POST /api/v1/inventory/adjust?storeId={storeId}&skuId={skuId}&quantity={quantity}
+     * POST /api/v1/inventory/adjust — @RequestBody { skuId, quantity }
      */
-    adjustInventory: async (storeId: number, skuId: number, quantity: number): Promise<void> => {
-        const params = new URLSearchParams({
-            storeId: String(storeId),
-            skuId: String(skuId),
-            quantity: String(quantity),
-        });
-        const response = await fetch(`${API_BASE_URL}/api/v1/inventory/adjust?${params.toString()}`, {
+    adjustInventory: async (_storeId: number, skuId: number, quantity: number): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/inventory/adjust`, {
             method: "POST",
             headers: getAuthHeaders(),
+            body: JSON.stringify({ skuId, quantity }),
         });
 
         if (!response.ok) {
@@ -132,17 +130,13 @@ export const inventoryApi = {
 
     /**
      * Thanh lý / báo cáo hàng lỗi
-     * POST /api/v1/inventory/dispose?storeId={storeId}&skuId={skuId}&quantity={quantity}
+     * POST /api/v1/inventory/dispose  — @RequestBody { skuId, quantity }
      */
-    disposeInventory: async (storeId: number, skuId: number, quantity: number): Promise<void> => {
-        const params = new URLSearchParams({
-            storeId: String(storeId),
-            skuId: String(skuId),
-            quantity: String(quantity),
-        });
-        const response = await fetch(`${API_BASE_URL}/api/v1/inventory/dispose?${params.toString()}`, {
+    disposeInventory: async (_storeId: number, skuId: number, quantity: number): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/inventory/dispose`, {
             method: "POST",
             headers: getAuthHeaders(),
+            body: JSON.stringify({ skuId, quantity }),
         });
 
         if (!response.ok) {

@@ -29,7 +29,7 @@ export default function StaffDashboard() {
   const handleLogout = () => {
     logoutAdmin();
     toast.success('Đã đăng xuất');
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // Get current store data

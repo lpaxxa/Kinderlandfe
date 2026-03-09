@@ -48,7 +48,7 @@ export default function ImportOrderPage() {
 
     const handleLogout = () => {
         logoutAdmin();
-        navigate('/admin/login');
+        navigate('/login');
     };
 
     // Fetch store availability

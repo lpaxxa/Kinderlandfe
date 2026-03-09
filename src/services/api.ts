@@ -347,6 +347,32 @@ export const api = {
       throw error;
     }
   },
+
+  /**
+   * Generic PATCH request with automatic token refresh
+   * @param endpoint - API endpoint (without base URL)
+   * @param data - Request body data
+   */
+  patch: async (endpoint: string, data: any) => {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API PATCH error:', error);
+      throw error;
+    }
+  },
 };
 
 /**
