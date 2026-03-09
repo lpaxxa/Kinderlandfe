@@ -51,10 +51,8 @@ export default function Cart() {
   });
 
   const subtotal = selectedItems.reduce((sum, item) => {
-    const sku = item.skuResponse || item.sku || {};
-    const product = item.productResponse || sku.productResponse || item.product || {};
-    const price = sku.price || item.price || item.unitPrice || product.minPrice || product.price || item.productPrice || 0;
-    return sum + (price * (item.quantity || 1));
+    // Priority: use the totals already calculated by backend
+    return sum + (item.totalPrice || (item.finalPrice * item.quantity) || (item.unitPrice * item.quantity) || 0);
   }, 0);
 
   const handleCheckout = () => {
@@ -180,23 +178,21 @@ export default function Cart() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
+            {/* DEBUG: Log full cart array once for visibility */}
+            {(() => {
+              if (cart.length > 0) console.log("CURRENT CART DATA:", cart);
+              return null;
+            })()}
             {cart.map((item, index) => {
-              // DEBUG: Log the first item to help identify structure
-              if (index === 0) console.log("SAMPLE CART ITEM:", item);
-
-              const sku = item.skuResponse || item.sku || {};
-              const product = item.productResponse || sku.productResponse || item.product || {};
-
               // CRITICAL: Try all possible ID fields for the CART ITEM itself
-              // Usually the backend returns 'id' for the cart item ID
               const cartItemId = item.id || item.cartItemId || item.idCart || item.cartId;
               const isSelected = selectedIds.includes(cartItemId);
 
-              // Alignment: imageUrl from productResponse (preferred), SKU Code from skuResponse
-              const name = product.name || item.productName || item.name || "Sản phẩm";
-              const imageUrl = product.imageUrl || item.imageUrl || item.productImageUrl || product.image || item.image || "/placeholder.png";
-              const price = sku.price || item.price || item.unitPrice || product.minPrice || product.price || 0;
-              const skuCode = sku.skuCode || item.skuCode || "";
+              const name = item.productName || item.name || "Sản phẩm";
+              const imageUrl = item.imageUrl || item.productImageUrl || "/placeholder.png";
+              const skuCode = item.skuCode || "";
+              const color = item.color || "";
+              const size = item.size || "";
 
               return (
                 <div
@@ -229,20 +225,38 @@ export default function Cart() {
                           {skuCode}
                         </p>
                       )}
-                      {sku.color && (
+                      {color && (
                         <p className="text-sm text-gray-600 font-medium">
-                          Màu sắc: <span className="text-gray-900">{sku.color}</span>
+                          Màu sắc: <span className="text-gray-900">{color}</span>
                         </p>
                       )}
-                      {sku.size && (
+                      {size && (
                         <p className="text-sm text-gray-600 font-medium">
-                          Kích cỡ: <span className="text-gray-900">{sku.size}</span>
+                          Kích cỡ: <span className="text-gray-900">{size}</span>
                         </p>
                       )}
                     </div>
-                    <p className="text-[#AF140B] font-bold text-lg mt-2">
-                      {formatPrice(price)}
-                    </p>
+                    <div className="mt-2">
+                      {item.discountAmount > 0 || (item.unitPrice > (item.finalPrice || item.unitPrice)) ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#AF140B] font-bold text-xl">
+                              {formatPrice(item.finalPrice || (item.unitPrice - (item.discountAmount || 0)))}
+                            </span>
+                            <span className="bg-red-500 text-white px-2 py-0.5 rounded-full font-bold text-[10px]">
+                              Giảm {Math.round(((item.unitPrice - (item.finalPrice || item.unitPrice)) / item.unitPrice) * 100) || 0}%
+                            </span>
+                          </div>
+                          <p className="text-gray-400 line-through text-sm">
+                            {formatPrice(item.unitPrice)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-[#AF140B] font-bold text-xl">
+                          {formatPrice(item.finalPrice || item.unitPrice)}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-end justify-between">
