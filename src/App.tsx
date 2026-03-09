@@ -28,6 +28,10 @@ import OrderManagement from './components/admin/OrderManagement';
 import PromotionManagement from './components/admin/PromotionManagement';
 import UserManagement from './components/admin/UserManagement';
 import ReturnManagement from './components/admin/ReturnManagement';
+import AdminCategoryController from './components/admin/AdminCategoryController';
+import AdminBrandManagement from './components/admin/AdminBrandManagement';
+import AdminReviewManagement from './components/admin/AdminReviewManagement';
+import AdminBlogManagement from './components/admin/AdminBlogManagement';
 import StaffDashboard from './components/staff/StaffDashboard';
 import QRScanner from './components/staff/QRScanner';
 import InventoryCheck from './components/staff/InventoryCheck';
@@ -105,7 +109,15 @@ function AppContent() {
             <Route path="orders" element={<OrderManagement />} />
             <Route path="promotions" element={<PromotionManagement />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="categories" element={<AdminCategoryController />} />
+            <Route path="brands" element={<AdminBrandManagement />} />
+            <Route path="reviews" element={<AdminReviewManagement />} />
             <Route path="returns" element={<ReturnManagement />} />
+            <Route path="blog" element={<AdminBlogManagement />} />
+            <Route path="policies" element={<ProductManagement />} />
+            <Route path="reports" element={<AdminDashboard />} />
+            <Route path="financial" element={<AdminDashboard />} />
+            <Route path="inventory" element={<ProductManagement />} />
           </Route>
 
           {/* Manager Routes - wrapped in ManagerLayout for persistent sidebar */}

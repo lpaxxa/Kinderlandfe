@@ -1,25 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner@2.0.3';
 import {
   User,
   Mail,
   Phone,
-  MapPin,
-  Calendar,
   Edit,
   Save,
   X,
   ArrowLeft,
   Shield,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -32,21 +30,49 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
+import { accountApi, UserResponse } from '../../services/accountApi';
 
 export default function CustomerProfile() {
   const { user } = useApp();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState<UserResponse | null>(null);
+
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    dateOfBirth: '1990-05-15',
-    gender: 'female',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
   });
 
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await accountApi.getProfile();
+      if (response && response.data) {
+        setProfileData(response.data);
+        setFormData({
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          email: response.data.email || '',
+          phone: response.data.phone || '',
+        });
+      }
+    } catch (error) {
+      toast.error('Không thể tải thông tin tài khoản');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setFormData({
       ...formData,
@@ -54,23 +80,45 @@ export default function CustomerProfile() {
     });
   };
 
-  const handleSave = () => {
-    // In real app, this would call an API to update user profile
-    toast.success('Cập nhật thông tin thành công!');
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await accountApi.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+      });
+      toast.success('Cập nhật thông tin thành công!');
+      setIsEditing(false);
+      // Refresh data
+      await fetchProfile();
+    } catch (error: any) {
+      toast.error(error.message || 'Cập nhật thất bại');
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      address: user?.address || '',
-      dateOfBirth: '1990-05-15',
-      gender: 'female',
-    });
+    if (profileData) {
+      setFormData({
+        firstName: profileData.firstName || '',
+        lastName: profileData.lastName || '',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+      });
+    }
     setIsEditing(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -107,20 +155,39 @@ export default function CustomerProfile() {
                 <CardTitle>Thông tin cá nhân</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Name */}
-                <div>
-                  <Label htmlFor="name">Họ và tên *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="pl-10"
-                      placeholder="Nhập họ và tên"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                  {/* First Name */}
+                  <div>
+                    <Label htmlFor="firstName">Họ *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-10"
+                        placeholder="Nhập họ"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Last Name */}
+                  <div>
+                    <Label htmlFor="lastName">Tên *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-10"
+                        placeholder="Nhập tên"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -141,7 +208,7 @@ export default function CustomerProfile() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Email không thể thay đổi
+                    Email đăng nhập không thể thay đổi
                   </p>
                 </div>
 
@@ -162,94 +229,22 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
-                {/* Date of Birth */}
-                <div>
-                  <Label htmlFor="dateOfBirth">Ngày sinh</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Gender */}
-                <div>
-                  <Label>Giới tính</Label>
-                  <div className="flex gap-4 mt-2">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="gender"
-                        value="male"
-                        checked={formData.gender === 'male'}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        className="text-indigo-600"
-                      />
-                      <span className="text-sm">Nam</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="gender"
-                        value="female"
-                        checked={formData.gender === 'female'}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        className="text-indigo-600"
-                      />
-                      <span className="text-sm">Nữ</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="gender"
-                        value="other"
-                        checked={formData.gender === 'other'}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        className="text-indigo-600"
-                      />
-                      <span className="text-sm">Khác</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <Label htmlFor="address">Địa chỉ</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <Textarea
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="pl-10 min-h-[80px]"
-                      placeholder="Nhập địa chỉ của bạn"
-                    />
-                  </div>
-                </div>
-
                 {/* Action Buttons */}
                 {isEditing && (
                   <div className="flex gap-3 pt-4">
-                    <Button onClick={handleSave} className="flex-1">
-                      <Save className="w-4 h-4 mr-2" />
+                    <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
                       Lưu thay đổi
                     </Button>
                     <Button
                       onClick={handleCancel}
                       variant="outline"
                       className="flex-1"
+                      disabled={saving}
                     >
                       <X className="w-4 h-4 mr-2" />
                       Hủy
@@ -278,59 +273,9 @@ export default function CustomerProfile() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">Xác thực 2 bước</p>
-                    <p className="text-sm text-gray-600">
-                      Tăng cường bảo mật cho tài khoản
-                    </p>
-                  </div>
-                  <Badge variant="outline">Chưa kích hoạt</Badge>
-                </div>
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
-            <Card className="mt-6 border-red-200">
-              <CardHeader>
-                <CardTitle className="text-red-600">Vùng nguy hiểm</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-red-900">Xóa tài khoản</p>
-                    <p className="text-sm text-red-700">
-                      Hành động này không thể hoàn tác
-                    </p>
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Xóa tài khoản
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Bạn có chắc chắn muốn xóa tài khoản?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Hành động này không thể hoàn tác. Tất cả dữ liệu của bạn
-                          sẽ bị xóa vĩnh viễn khỏi hệ thống.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
-                        <AlertDialogAction className="bg-red-600 hover:bg-red-700">
-                          Xác nhận xóa
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Sidebar */}
@@ -342,37 +287,24 @@ export default function CustomerProfile() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Trạng thái</span>
-                  <Badge className="bg-green-500">Đã xác thực</Badge>
+                  <span className="text-sm text-gray-600">Vai trò</span>
+                  <Badge className={profileData?.role === 'ADMIN' ? 'bg-red-500' : 'bg-green-500'}>
+                    {profileData?.role || 'CUSTOMER'}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Hạng thành viên</span>
-                  <Badge className="bg-yellow-500">👑 Gold</Badge>
+                  <span className="text-sm text-gray-600">Trạng thái</span>
+                  {profileData?.isActive ? (
+                    <Badge className="bg-green-500">Đang hoạt động</Badge>
+                  ) : (
+                    <Badge variant="destructive">Đã khóa</Badge>
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Tham gia</span>
-                  <span className="text-sm font-medium">01/2024</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Hoạt động</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Đơn hàng</span>
-                  <span className="text-sm font-bold">12</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Đánh giá</span>
-                  <span className="text-sm font-bold">8</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Yêu thích</span>
-                  <span className="text-sm font-bold">15</span>
+                  <span className="text-sm font-medium">
+                    {profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                  </span>
                 </div>
               </CardContent>
             </Card>

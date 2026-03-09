@@ -1,21 +1,8 @@
-// Review API Service
-// Vite proxy forward /api/* → http://localhost:8080/api/*
+import { api } from './api';
 
-const API_BASE_URL = "";
+// ---- Types ----
 
-// --- Helper: get token ---
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem("accessToken");
-    return {
-        "Content-Type": "application/json",
-        Accept: "*/*",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
-
-// --- Types ---
-
-export interface ReviewItem {
+export interface Review {
     id: number;
     accountId: number;
     reviewerName: string;
@@ -28,13 +15,9 @@ export interface ReviewItem {
     managerReplyAt: string | null;
 }
 
-export interface ReviewListResponse {
-    timestamp: string;
-    statusCode: number;
-    apiPath: string;
-    message: string;
-    data: ReviewItem[];
-    success: boolean;
+export interface ReviewUpdatePayload {
+    rating: number;
+    comment: string;
 }
 
 export interface ReviewSingleResponse {
@@ -74,23 +57,12 @@ export const reviewApi = {
     /**
      * Lấy danh sách đánh giá theo productId
      * GET /api/reviews/product/{productId}
+     * Returns reviews for a specific product
      */
-    getReviewsByProduct: async (productId: number): Promise<ReviewItem[]> => {
-        const response = await fetch(
-            `${API_BASE_URL}/api/reviews/product/${productId}`,
-            {
-                method: "GET",
-                headers: getAuthHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: ReviewListResponse = await response.json();
-        return json.data;
+    getByProduct: async (productId: number): Promise<Review[]> => {
+        const response = await api.get(`/api/reviews/product/${productId}`);
+        // BaseResponse<List<ReviewResponseDTO>>
+        return response.data;
     },
 
     /**
@@ -136,30 +108,16 @@ export const reviewApi = {
     },
 
     /**
-     * Chỉnh sửa một đánh giá (manager/admin)
-     * PUT /api/reviews/edit/{reviewId}?rating={rating}&comment={comment}
+     * PUT /api/reviews/edit/{reviewId}
+     * Edit a review's rating and comment
      */
-    editReview: async (reviewId: number, rating: number, comment: string): Promise<ReviewItem> => {
+    edit: async (reviewId: number, payload: ReviewUpdatePayload): Promise<Review> => {
+        // Backend uses @RequestParam for rating and comment
         const params = new URLSearchParams({
-            rating: String(rating),
-            comment,
+            rating: payload.rating.toString(),
+            comment: payload.comment
         });
-        const response = await fetch(
-            `${API_BASE_URL}/api/reviews/edit/${reviewId}?${params.toString()}`,
-            {
-                method: "PUT",
-                headers: getAuthHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: { data: ReviewItem } = await response.json();
-        return json.data;
-    },
+        const response = await api.put(`/api/reviews/edit/${reviewId}?${params.toString()}`, null);
+        return response.data;
+    }
 };
-
-export default reviewApi;
