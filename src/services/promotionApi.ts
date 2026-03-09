@@ -145,6 +145,22 @@ export const promotionApi = {
     },
 
     /**
+     * GET /api/v1/promotions/{id}
+     */
+    getPromotionById: async (id: number): Promise<Promotion> => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/promotions/${id}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `HTTP ${response.status}`);
+        }
+        const json: ApiResponse<Promotion> = await response.json();
+        return json.data;
+    },
+
+    /**
      * POST /api/v1/promotions/{id}/assign-products
      * Assign product IDs to a promotion
      */
