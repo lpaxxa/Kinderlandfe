@@ -167,13 +167,6 @@ export default function AdminReviewManagement() {
                                         <div className="flex flex-col justify-center min-w-0">
                                             <h3 className="font-semibold text-sm truncate group-hover:text-[#AF140B]">{product.name}</h3>
                                             <p className="text-xs text-gray-500">ID: #{product.id}</p>
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                                <span className="text-xs font-medium">0</span>
-                                                <span className="text-gray-300 mx-1">|</span>
-                                                <MessageSquare className="w-3 h-3 text-gray-400" />
-                                                <span className="text-xs text-gray-500">0 đánh giá</span>
-                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
