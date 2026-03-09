@@ -1,13 +1,6 @@
-const API_BASE_URL = '';
+import { authenticatedFetch } from './api';
 
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('accessToken');
-    return {
-        'Content-Type': 'application/json',
-        Accept: '*/*',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
+const API_BASE_URL = '';
 
 // ---- Types ----
 
@@ -80,9 +73,9 @@ export const promotionApi = {
         q.set('page', String(params?.page ?? 0));
         q.set('size', String(params?.size ?? 20));
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/promotions?${q}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/promotions?${q}`, {
             method: 'GET',
-            headers: getAuthHeaders(),
+            headers: { 'Content-Type': 'application/json', Accept: '*/*' },
         });
         if (!response.ok) {
             const text = await response.text();
@@ -96,9 +89,9 @@ export const promotionApi = {
      * POST /api/v1/promotions
      */
     createPromotion: async (payload: CreatePromotionPayload): Promise<Promotion> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/promotions`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/promotions`, {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: { 'Content-Type': 'application/json', Accept: '*/*' },
             body: JSON.stringify(payload),
         });
         if (!response.ok) {
@@ -113,9 +106,9 @@ export const promotionApi = {
      * PUT /api/v1/promotions/{id}
      */
     updatePromotion: async (id: number, payload: CreatePromotionPayload): Promise<Promotion> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/promotions/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/promotions/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: { 'Content-Type': 'application/json', Accept: '*/*' },
             body: JSON.stringify(payload),
         });
         if (!response.ok) {
@@ -130,13 +123,9 @@ export const promotionApi = {
      * DELETE /api/v1/promotions/{id}
      */
     deletePromotion: async (id: number): Promise<void> => {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_BASE_URL}/api/v1/promotions/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/promotions/${id}`, {
             method: 'DELETE',
-            headers: {
-                Accept: '*/*',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
+            headers: { Accept: '*/*' },
         });
         if (!response.ok) {
             const text = await response.text();
@@ -146,12 +135,11 @@ export const promotionApi = {
 
     /**
      * POST /api/v1/promotions/{id}/assign-products
-     * Assign product IDs to a promotion
      */
     assignProducts: async (promotionId: number, productIds: number[]): Promise<PromotionProduct[]> => {
-        const response = await fetch(`${API_BASE_URL}/api/v1/promotions/${promotionId}/assign-products`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/promotions/${promotionId}/assign-products`, {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: { 'Content-Type': 'application/json', Accept: '*/*' },
             body: JSON.stringify({ productIds }),
         });
         if (!response.ok) {
