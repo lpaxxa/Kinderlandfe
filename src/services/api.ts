@@ -18,14 +18,14 @@ const processQueue = (error?: any, token?: string) => {
       prom.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
 // Refresh JWT access token using refresh token
 const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = localStorage.getItem('refreshToken');
-  
+
   if (!refreshToken) {
     throw new Error('No refresh token available');
   }
@@ -46,25 +46,25 @@ const refreshAccessToken = async (): Promise<string> => {
     }
 
     const data = await response.json();
-    
+
     if (!data?.data?.accessToken) {
       throw new Error('Invalid refresh token response');
     }
 
     const { accessToken, refreshToken: newRefreshToken } = data.data;
-    
+
     // Update tokens in localStorage
     localStorage.setItem('accessToken', accessToken);
     if (newRefreshToken) {
       localStorage.setItem('refreshToken', newRefreshToken);
     }
-    
+
     return accessToken;
   } catch (error) {
     // Clear tokens on refresh failure
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    
+
     // Redirect to login page
     window.location.href = '/login';
     throw error;
@@ -72,22 +72,22 @@ const refreshAccessToken = async (): Promise<string> => {
 };
 
 // Enhanced fetch with automatic token refresh
-const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   // List of endpoints that should NOT have auth headers
   const publicEndpoints = [
     '/api/v1/auth/login',
-    '/api/v1/auth/login/google', 
+    '/api/v1/auth/login/google',
     '/api/v1/auth/register',
     '/api/v1/auth/refresh'
   ];
-  
+
   // Check if this is a public endpoint
   const isPublicEndpoint = publicEndpoints.some(endpoint => url.includes(endpoint));
-  
+
   // Only add auth headers for protected endpoints
   if (!isPublicEndpoint) {
     const accessToken = localStorage.getItem('accessToken');
-    
+
     // Add Authorization header if token exists
     if (accessToken) {
       options.headers = {
@@ -102,7 +102,7 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}): Promi
   // Handle token expiration (only for protected endpoints)
   if (response.status === 401 && !isPublicEndpoint) {
     const accessToken = localStorage.getItem('accessToken');
-    
+
     if (accessToken) {
       // If already refreshing, queue this request
       if (isRefreshing) {
@@ -123,7 +123,7 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}): Promi
       try {
         const newToken = await refreshAccessToken();
         processQueue(null, newToken);
-        
+
         // Retry original request with new token
         options.headers = {
           ...options.headers,
@@ -419,7 +419,7 @@ export const authUtils = {
     localStorage.removeItem('refreshToken');
     // Clear any other user-related data if needed
     localStorage.removeItem('user');
-    
+
     // Redirect to login page
     window.location.href = '/login';
   },
