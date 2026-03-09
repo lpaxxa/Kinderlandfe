@@ -18,7 +18,7 @@ export default function EnhancedAdminDashboard() {
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // Statistics data

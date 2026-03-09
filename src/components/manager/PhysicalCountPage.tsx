@@ -33,7 +33,7 @@ export default function PhysicalCountPage() {
     const { storeId, setStoreId } = useStoreId();
     const [storeIdInput, setStoreIdInput] = useState(storeId ?? '');
 
-    const handleLogout = () => { logoutAdmin(); navigate('/admin/login'); };
+    const handleLogout = () => { logoutAdmin(); navigate('/login'); };
 
     const fetchInventory = async (sid?: string) => {
         const effectiveId = sid ?? storeId ?? '';

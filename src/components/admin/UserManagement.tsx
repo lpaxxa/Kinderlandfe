@@ -61,7 +61,7 @@ export default function UserManagement() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const handleLogout = () => { logoutAdmin(); navigate('/admin/login'); };
+  const handleLogout = () => { logoutAdmin(); navigate('/login'); };
 
   const fetchAccounts = async () => {
     setLoading(true);

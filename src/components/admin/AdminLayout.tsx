@@ -17,7 +17,7 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // Sidebar navigation items

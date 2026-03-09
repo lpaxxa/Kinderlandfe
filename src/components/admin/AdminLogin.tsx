@@ -43,24 +43,41 @@ export default function AdminLogin() {
       // DEBUG: xem BE trả những field gì
       console.log('[AdminLogin] login data fields:', Object.keys(data), data);
 
-      const { accessToken, refreshToken, role, email: userEmail, storeId } = data;
+      const { accessToken, refreshToken, role, email: userEmail } = data;
 
       // Lưu token để các API call sau dùng
       localStorage.setItem('accessToken', accessToken);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-      // Lưu storeId riêng để các API inventory dùng
-      if (storeId) localStorage.setItem('storeId', String(storeId));
 
       toast.success('Đăng nhập thành công!');
 
+      // For MANAGER: fetch their assigned store via /api/v1/stores/me
+      let storeId: string | undefined;
+      let storeName: string | undefined;
+
+      if (role === 'ROLE_MANAGER') {
+        try {
+          const storeRes = await api.get('/api/v1/stores/me');
+          const store = storeRes?.data;
+          if (store) {
+            storeId = String(store.id);
+            storeName = store.name;
+            localStorage.setItem('storeId', storeId);
+            console.log('[AdminLogin] manager store:', store.name, 'id:', store.id);
+          }
+        } catch (storeErr) {
+          console.warn('[AdminLogin] Could not fetch manager store:', storeErr);
+        }
+      }
+
       if (role === 'ROLE_ADMIN') {
-        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'admin', storeId: storeId ? String(storeId) : undefined });
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'admin' });
         navigate('/admin/dashboard');
       } else if (role === 'ROLE_MANAGER') {
-        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'manager', storeId: storeId ? String(storeId) : undefined });
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'manager', storeId, storeName });
         navigate('/manager/dashboard');
       } else if (role === 'ROLE_STAFF') {
-        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'staff', storeId: storeId ? String(storeId) : undefined });
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: 'staff', storeId, storeName });
         navigate('/staff/dashboard');
       } else {
         toast.error(`Role không được hỗ trợ: ${role}`);

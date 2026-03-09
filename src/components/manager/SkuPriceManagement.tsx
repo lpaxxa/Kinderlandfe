@@ -53,7 +53,7 @@ export default function SkuPriceManagement() {
 
     const handleLogout = () => {
         logoutAdmin();
-        navigate('/admin/login');
+        navigate('/login');
     };
 
     // Load SKU by ID

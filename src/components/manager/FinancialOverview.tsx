@@ -66,7 +66,7 @@ export default function FinancialOverview() {
 
     const handleLogout = () => {
         logoutAdmin();
-        navigate('/admin/login');
+        navigate('/login');
     };
 
     const metrics = data

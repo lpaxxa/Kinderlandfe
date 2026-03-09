@@ -52,21 +52,40 @@ export default function LoginPage() {
 
       const { accessToken, refreshToken, role, email: userEmail } = data;
 
+      // Clear any stale tokens first, then set new ones
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('storeId');
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
       toast.success("Đăng nhập thành công!");
 
       if (role === "ROLE_ADMIN") {
-        loginAdmin({ email: userEmail, role: "admin" });
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "admin" });
         navigate("/admin/dashboard");
 
       } else if (role === "ROLE_MANAGER") {
-        loginAdmin({ email: userEmail, role: "manager" });
+        // Fetch the manager's assigned store
+        let storeId: string | undefined;
+        let storeName: string | undefined;
+        try {
+          const storeRes = await api.get('/api/v1/stores/me');
+          const store = storeRes?.data;
+          if (store) {
+            storeId = String(store.id);
+            storeName = store.name;
+            localStorage.setItem('storeId', storeId);
+            console.log('[Login] manager store:', store.name, 'id:', store.id);
+          }
+        } catch (storeErr) {
+          console.warn('[Login] Could not fetch manager store:', storeErr);
+        }
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "manager", storeId, storeName });
         navigate("/manager/dashboard");
 
       } else if (role === "ROLE_STAFF") {
-        loginAdmin({ email: userEmail, role: "staff" });
+        loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "staff" });
         navigate("/staff/dashboard");
 
       } else {
@@ -123,15 +142,28 @@ export default function LoginPage() {
       toast.success(`Chào mừng ${email}!`);
 
       if (role === "ROLE_ADMIN") {
-        loginAdmin({ email, role: "admin" });
+        loginAdmin({ id: email, email, name: email, role: "admin" });
         navigate("/admin/dashboard");
 
       } else if (role === "ROLE_MANAGER") {
-        loginAdmin({ email, role: "manager" });
+        let storeId: string | undefined;
+        let storeName: string | undefined;
+        try {
+          const storeRes = await api.get('/api/v1/stores/me');
+          const store = storeRes?.data;
+          if (store) {
+            storeId = String(store.id);
+            storeName = store.name;
+            localStorage.setItem('storeId', storeId);
+          }
+        } catch (storeErr) {
+          console.warn('[GoogleLogin] Could not fetch manager store:', storeErr);
+        }
+        loginAdmin({ id: email, email, name: email, role: "manager", storeId, storeName });
         navigate("/manager/dashboard");
 
       } else if (role === "ROLE_STAFF") {
-        loginAdmin({ email, role: "staff" });
+        loginAdmin({ id: email, email, name: email, role: "staff" });
         navigate("/staff/dashboard");
 
       } else {
