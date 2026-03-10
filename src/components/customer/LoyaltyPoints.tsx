@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useApp } from '../../context/AppContext';
+import { loyaltyApi } from '../../services/loyaltyApi';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   Star,
   Gift,
@@ -18,6 +19,8 @@ import {
   Sparkles,
   Crown,
   Trophy,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Reward {
@@ -42,10 +45,38 @@ export default function LoyaltyPoints() {
   const { user } = useApp();
   const [selectedTab, setSelectedTab] = useState('overview');
 
-  // Mock data
+  // Real API state
+  const [realPoints, setRealPoints] = useState<number | null>(null);
+  const [pointsLoading, setPointsLoading] = useState(true);
+  const [pointsError, setPointsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPoints = async () => {
+      setPointsLoading(true);
+      setPointsError(null);
+      try {
+        const data = await loyaltyApi.getMyPoints();
+        // BE may return points in `points` or `point` field
+        const pts = (data.points ?? (data as Record<string, unknown>).point ?? null) as number | null;
+        setRealPoints(pts);
+      } catch (err: unknown) {
+        setPointsError(err instanceof Error ? err.message : 'Không thể tải điểm tích lũy.');
+        // Fall back to user context points
+        setRealPoints(user?.points ?? 0);
+      } finally {
+        setPointsLoading(false);
+      }
+    };
+    fetchPoints();
+  }, [user?.points]);
+
+  // Use real points if available, fallback to context
+  const currentPoints = realPoints ?? user?.points ?? 0;
+
+  // Mock/derived data
   const customerPoints = {
-    current: user?.points || 0,
-    lifetime: (user?.points || 0) + 1700,
+    current: currentPoints,
+    lifetime: currentPoints + 1700,
     expiringSoon: 200,
     expiryDate: '2026-03-31',
     tier: user?.membershipTier || 'bronze',
@@ -230,15 +261,28 @@ export default function LoyaltyPoints() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <p className="text-white/90 mb-2">Điểm hiện tại</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold">
-                        {customerPoints.current.toLocaleString('vi-VN')}
-                      </span>
-                      <span className="text-2xl text-white/90">điểm</span>
-                    </div>
+                    {pointsLoading ? (
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-white/70" />
+                        <span className="text-white/70 text-lg">Đang tải...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-bold">
+                          {customerPoints.current.toLocaleString('vi-VN')}
+                        </span>
+                        <span className="text-2xl text-white/90">điểm</span>
+                      </div>
+                    )}
                   </div>
                   <Star className="w-16 h-16 text-[#FFD700] fill-[#FFD700] drop-shadow-lg" />
                 </div>
+                {pointsError && (
+                  <div className="flex items-center gap-2 text-yellow-200 text-xs mb-3">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    Dùng dữ liệu dự phòng — {pointsError}
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white/90">
                     Tổng điểm tích lũy: {customerPoints.lifetime.toLocaleString('vi-VN')}
@@ -313,13 +357,12 @@ export default function LoyaltyPoints() {
                   {Object.entries(tierBenefits).map(([key, tier]) => (
                     <div
                       key={key}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        key === customerPoints.tier
-                          ? key === 'gold' 
-                            ? 'border-[#D4AF37] bg-gradient-to-br from-[#FFF9E6] to-[#FFFDF7] shadow-lg shadow-[#D4AF37]/20'
-                            : 'border-[#AF140B] bg-[#FFE5E3]'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`p-4 rounded-lg border-2 transition-all ${key === customerPoints.tier
+                        ? key === 'gold'
+                          ? 'border-[#D4AF37] bg-gradient-to-br from-[#FFF9E6] to-[#FFFDF7] shadow-lg shadow-[#D4AF37]/20'
+                          : 'border-[#AF140B] bg-[#FFE5E3]'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       <div className="text-center mb-3">
                         <span className="text-4xl">{tier.icon}</span>
@@ -413,15 +456,15 @@ export default function LoyaltyPoints() {
                             reward.category === 'voucher'
                               ? 'default'
                               : reward.category === 'gift'
-                              ? 'secondary'
-                              : 'outline'
+                                ? 'secondary'
+                                : 'outline'
                           }
                         >
                           {reward.category === 'voucher'
                             ? 'Voucher'
                             : reward.category === 'gift'
-                            ? 'Quà tặng'
-                            : 'Sản phẩm'}
+                              ? 'Quà tặng'
+                              : 'Sản phẩm'}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-3">
@@ -475,11 +518,10 @@ export default function LoyaltyPoints() {
                     >
                       <div className="flex items-center gap-4">
                         <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            item.type === 'earn'
-                              ? 'bg-green-100'
-                              : 'bg-orange-100'
-                          }`}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${item.type === 'earn'
+                            ? 'bg-green-100'
+                            : 'bg-orange-100'
+                            }`}
                         >
                           {item.type === 'earn' ? (
                             <TrendingUp className="w-5 h-5 text-green-600" />
@@ -496,9 +538,8 @@ export default function LoyaltyPoints() {
                         </div>
                       </div>
                       <div
-                        className={`text-lg font-bold ${
-                          item.type === 'earn' ? 'text-green-600' : 'text-orange-600'
-                        }`}
+                        className={`text-lg font-bold ${item.type === 'earn' ? 'text-green-600' : 'text-orange-600'
+                          }`}
                       >
                         {item.type === 'earn' ? '+' : ''}
                         {item.points.toLocaleString('vi-VN')}

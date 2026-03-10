@@ -1,351 +1,167 @@
-import React from 'react';
 import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { 
-  LayoutDashboard, Package, ShoppingCart, TrendingUp, FileText,
-  Warehouse, DollarSign, Users, BarChart3, Settings, LogOut,
-  ArrowLeftRight, FileBarChart, Megaphone, Shield, UserCog,
-  ClipboardList, MessageSquare, Star, MapPin, Truck, AlertTriangle
+import {
+  LayoutDashboard, Package, Warehouse, DollarSign,
+  MessageSquare, ChevronRight, Truck,
+  ArrowLeftRight
 } from 'lucide-react';
-import { Badge } from '../ui/badge';
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
-  const { adminUser, logoutAdmin } = useAdmin();
+  const { adminUser } = useAdmin();
 
-  const handleLogout = () => {
-    logoutAdmin();
-    navigate('/admin/login');
-  };
-
-  // Statistics data
+  // Statistics data — only features from use case diagram
   const stats = [
-    { label: 'Đơn hàng hôm nay', value: '48', change: '+12%', icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Doanh thu hôm nay', value: '₫42.5M', change: '+8%', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Sản phẩm sắp hết', value: '12', change: '-3 hôm nay', icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Đánh giá mới', value: '23', change: '+5 hôm nay', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
-  ];
-
-  // Manager features grouped by category
-  const featureGroups = [
-    {
-      title: 'Quản lý sản phẩm',
-      description: 'Quản lý danh mục sản phẩm và tồn kho',
-      features: [
-        { 
-          title: 'Quản lý sản phẩm', 
-          description: 'Thêm, sửa, xóa sản phẩm (UC-18, UC-45, UC-46, UC-47)', 
-          icon: Package,
-          path: '/manager/products',
-          color: 'bg-[#AF140B]'
-        },
-        { 
-          title: 'Quản lý danh mục', 
-          description: 'Quản lý danh mục và phân loại (UC-19)', 
-          icon: LayoutDashboard,
-          path: '/manager/categories',
-          color: 'bg-[#AF140B]'
-        },
-        { 
-          title: 'Kiểm tra tồn kho', 
-          description: 'Xem tình trạng tồn kho theo chi nhánh (UC-27)', 
-          icon: Warehouse,
-          path: '/manager/inventory',
-          color: 'bg-[#AF140B]'
-        },
-        { 
-          title: 'Cập nhật kho', 
-          description: 'Cập nhật số lượng hàng tồn kho (UC-35)', 
-          icon: ClipboardList,
-          path: '/manager/storage',
-          color: 'bg-[#AF140B]'
-        },
-      ]
-    },
-    {
-      title: 'Quản lý đơn hàng & Bán hàng',
-      description: 'Xử lý đơn hàng và hoàn trả',
-      features: [
-        { 
-          title: 'Quản lý đơn hàng', 
-          description: 'Xem và xử lý đơn hàng (UC-20)', 
-          icon: ShoppingCart,
-          path: '/manager/orders',
-          color: 'bg-[#D4AF37]'
-        },
-        { 
-          title: 'Tạo đơn hàng', 
-          description: 'Tạo đơn hàng mới cho khách (UC-36, UC-37)', 
-          icon: FileText,
-          path: '/manager/create-order',
-          color: 'bg-[#D4AF37]'
-        },
-        { 
-          title: 'Xử lý hoàn trả', 
-          description: 'Xử lý yêu cầu trả hàng (UC-24, UC-52)', 
-          icon: ArrowLeftRight,
-          path: '/manager/returns',
-          color: 'bg-[#D4AF37]'
-        },
-      ]
-    },
-    {
-      title: 'Kho hàng & Vận chuyển',
-      description: 'Quản lý nhập kho và luân chuyển',
-      features: [
-        { 
-          title: 'Yêu cầu chuyển kho', 
-          description: 'Chuyển hàng giữa các chi nhánh (UC-49)', 
-          icon: Truck,
-          path: '/manager/stock-transfer',
-          color: 'bg-blue-600'
-        },
-        { 
-          title: 'Nhập hàng từ kho chính', 
-          description: 'Tạo đơn nhập hàng (UC-50)', 
-          icon: Package,
-          path: '/manager/import-orders',
-          color: 'bg-blue-600'
-        },
-        { 
-          title: 'Quản lý nhập hàng', 
-          description: 'Theo dõi đơn nhập hàng (UC-51)', 
-          icon: ClipboardList,
-          path: '/manager/import-management',
-          color: 'bg-blue-600'
-        },
-        { 
-          title: 'Báo cáo hàng lỗi', 
-          description: 'Liệt kê và thanh lý hàng lỗi (UC-33)', 
-          icon: AlertTriangle,
-          path: '/manager/defective-report',
-          color: 'bg-orange-600'
-        },
-        { 
-          title: 'Kiểm kê thực tế', 
-          description: 'Ghi nhận số lượng thực tế (UC-34)', 
-          icon: ClipboardList,
-          path: '/manager/physical-count',
-          color: 'bg-blue-600'
-        },
-      ]
-    },
-    {
-      title: 'Marketing & Nội dung',
-      description: 'Quản lý khuyến mãi và blog',
-      features: [
-        { 
-          title: 'Quản lý khuyến mãi', 
-          description: 'Tạo và quản lý chương trình khuyến mãi (UC-21)', 
-          icon: Megaphone,
-          path: '/manager/promotions',
-          color: 'bg-[#D4AF37]'
-        },
-        { 
-          title: 'Quản lý Blog', 
-          description: 'Tạo và chỉnh sửa bài viết blog (UC-25)', 
-          icon: FileText,
-          path: '/manager/blog',
-          color: 'bg-purple-600'
-        },
-        { 
-          title: 'Quản lý chính sách', 
-          description: 'Cập nhật chính sách cửa hàng (UC-48)', 
-          icon: Shield,
-          path: '/manager/policies',
-          color: 'bg-purple-600'
-        },
-        { 
-          title: 'Quản lý đánh giá', 
-          description: 'Duyệt và phản hồi đánh giá (UC-31)', 
-          icon: MessageSquare,
-          path: '/manager/reviews',
-          color: 'bg-purple-600'
-        },
-      ]
-    },
-    {
-      title: 'Báo cáo & Tài chính',
-      description: 'Xem báo cáo và thống kê',
-      features: [
-        { 
-          title: 'Báo cáo tổng hợp', 
-          description: 'Xem báo cáo doanh số và hiệu suất (UC-23)', 
-          icon: BarChart3,
-          path: '/manager/reports',
-          color: 'bg-green-600'
-        },
-        { 
-          title: 'Quản lý tài chính', 
-          description: 'Theo dõi doanh thu và chi phí (UC-26)', 
-          icon: DollarSign,
-          path: '/manager/financial',
-          color: 'bg-green-600'
-        },
-      ]
-    },
-    {
-      title: 'Quản lý tài khoản',
-      description: 'Quản lý người dùng và phân quyền',
-      features: [
-        { 
-          title: 'Quản lý người dùng', 
-          description: 'Quản lý tài khoản khách hàng (UC-22)', 
-          icon: Users,
-          path: '/manager/users',
-          color: 'bg-indigo-600'
-        },
-        { 
-          title: 'Đổi mật khẩu', 
-          description: 'Thay đổi mật khẩu cá nhân (UC-39)', 
-          icon: UserCog,
-          path: '/manager/change-password',
-          color: 'bg-gray-600'
-        },
-      ]
-    },
+    { label: 'Tồn kho cần kiểm', value: '12', change: '-3 hôm nay', icon: Warehouse, bg: 'bg-blue-600' },
+    { label: 'Đơn nhập hàng', value: '8', change: '+2 mới', icon: Package, bg: 'bg-[#D4AF37]' },
+    { label: 'Yêu cầu hoàn trả', value: '5', change: 'Chờ xử lý', icon: ArrowLeftRight, bg: 'bg-orange-500' },
+    { label: 'Đánh giá mới', value: '23', change: '+5 hôm nay', icon: MessageSquare, bg: 'bg-[#AF140B]' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#D4AF37] rounded-lg flex items-center justify-center">
-                <LayoutDashboard className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#2C2C2C]">Manager Dashboard</h1>
-                <p className="text-sm text-gray-600">
-                  {adminUser?.name} - {adminUser?.storeName || 'Tất cả chi nhánh'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                className="border-gray-300"
-              >
-                Về trang chủ
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="border-[#AF140B] text-[#AF140B] hover:bg-[#AF140B] hover:text-white"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Đăng xuất
-              </Button>
+    <div className="p-6 bg-white min-h-full">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-[#AF140B] to-[#D91810] rounded-xl p-5 mb-6 text-white shadow-md">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold mb-1">
+              Xin chào, {adminUser?.name || 'Manager'}! 👋
+            </h2>
+            <p className="text-white/85 text-sm">
+              Chào mừng bạn trở lại. Quản lý chi nhánh hiệu quả hơn mỗi ngày.
+            </p>
+          </div>
+          <div className="hidden md:block">
+            <div className="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <LayoutDashboard className="w-8 h-8 text-white" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold text-[#2C2C2C] mb-1">{stat.value}</p>
-                      <p className="text-xs text-gray-500">{stat.change}</p>
-                    </div>
-                    <div className={`${stat.bg} p-3 rounded-lg`}>
-                      <Icon className={`w-6 h-6 ${stat.color}`} />
-                    </div>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mb-0.5">{stat.value}</p>
+                    <p className="text-xs text-green-600 font-medium">{stat.change}</p>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Feature Groups */}
-        <div className="space-y-6">
-          {featureGroups.map((group, groupIndex) => (
-            <Card key={groupIndex} className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-xl text-[#2C2C2C]">{group.title}</CardTitle>
-                <CardDescription>{group.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.features.map((feature, index) => {
-                    const Icon = feature.icon;
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => navigate(feature.path)}
-                        className="text-left p-4 rounded-lg border-2 border-gray-200 hover:border-[#AF140B] hover:shadow-md transition-all group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`${feature.color} p-2.5 rounded-lg group-hover:scale-110 transition-transform`}>
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-[#2C2C2C] mb-1 group-hover:text-[#AF140B] transition-colors">
-                              {feature.title}
-                            </h3>
-                            <p className="text-xs text-gray-600 line-clamp-2">
-                              {feature.description}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  <div className={`${stat.bg} p-2.5 rounded-lg`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-md mt-6">
-          <CardHeader>
-            <CardTitle className="text-xl text-[#2C2C2C]">Thao tác nhanh</CardTitle>
+      {/* Quick Actions — only features from use case diagram */}
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">Thao tác nhanh</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <button
+          onClick={() => navigate('/manager/inventory')}
+          className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-md transition-all group"
+        >
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Warehouse className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Kiểm tra tồn kho</span>
+        </button>
+        <button
+          onClick={() => navigate('/manager/import-orders')}
+          className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#D4AF37] hover:shadow-md transition-all group"
+        >
+          <div className="w-10 h-10 bg-[#D4AF37] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Package className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-sm font-medium text-gray-700 group-hover:text-[#D4AF37]">Nhập hàng</span>
+        </button>
+        <button
+          onClick={() => navigate('/manager/returns')}
+          className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:shadow-md transition-all group"
+        >
+          <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <ArrowLeftRight className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-sm font-medium text-gray-700 group-hover:text-orange-500">Xử lý hoàn trả</span>
+        </button>
+        <button
+          onClick={() => navigate('/manager/financial')}
+          className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:shadow-md transition-all group"
+        >
+          <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <DollarSign className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-sm font-medium text-gray-700 group-hover:text-green-600">Tài chính</span>
+        </button>
+      </div>
+
+      {/* Info Section — only use case features */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
+              <Warehouse className="w-4 h-4 text-blue-600" />
+              Quản lý kho hàng
+            </CardTitle>
+            <CardDescription className="text-xs">Quản lý danh mục, tồn kho và nhập hàng</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                onClick={() => navigate('/manager/create-order')}
-                className="bg-[#AF140B] hover:bg-[#8D0F08] h-auto py-4 flex-col gap-2"
+          <CardContent className="space-y-2">
+            {[
+              { label: 'Quản lý danh mục', desc: 'Quản lý danh mục và phân loại', path: '/manager/categories' },
+              { label: 'Kiểm tra tồn kho', desc: 'Xem tình trạng tồn kho', path: '/manager/inventory' },
+              { label: 'Cập nhật kho', desc: 'Cập nhật số lượng kho', path: '/manager/storage' },
+              { label: 'Kiểm kê thực tế', desc: 'Ghi nhận số lượng thực tế', path: '/manager/physical-count' },
+            ].map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 hover:shadow-sm transition-all group"
               >
-                <ShoppingCart className="w-6 h-6" />
-                <span>Tạo đơn hàng</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/manager/products')}
-                className="bg-[#D4AF37] hover:bg-[#B8860B] h-auto py-4 flex-col gap-2"
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-800 group-hover:text-blue-600">{item.label}</p>
+                  <p className="text-xs text-gray-500">{item.desc}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600" />
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-gray-800">
+              <Truck className="w-4 h-4 text-[#D4AF37]" />
+              Nhập hàng & Vận chuyển
+            </CardTitle>
+            <CardDescription className="text-xs">Nhập hàng, chuyển kho và báo cáo lỗi</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              // { label: 'Nhập hàng từ kho chính', desc: 'Tạo đơn nhập mới', path: '/manager/import-orders' },
+              { label: 'Quản lý nhập hàng', desc: 'Theo dõi đơn nhập', path: '/manager/import-management' },
+              { label: 'Báo cáo hàng lỗi', desc: 'Thanh lý sản phẩm lỗi', path: '/manager/defective-report' },
+            ].map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-amber-50 hover:shadow-sm transition-all group"
               >
-                <Package className="w-6 h-6" />
-                <span>Thêm sản phẩm</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/manager/inventory')}
-                className="bg-blue-600 hover:bg-blue-700 h-auto py-4 flex-col gap-2"
-              >
-                <Warehouse className="w-6 h-6" />
-                <span>Kiểm kho</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/manager/reports')}
-                className="bg-green-600 hover:bg-green-700 h-auto py-4 flex-col gap-2"
-              >
-                <BarChart3 className="w-6 h-6" />
-                <span>Xem báo cáo</span>
-              </Button>
-            </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-800 group-hover:text-[#D4AF37]">{item.label}</p>
+                  <p className="text-xs text-gray-500">{item.desc}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#D4AF37]" />
+              </button>
+            ))}
           </CardContent>
         </Card>
       </div>

@@ -83,26 +83,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Helper: parse all possible response shapes from cart API
+  const normalizeCartItems = (res: any): any[] | null => {
+    // Shape 1: { data: { items: [...] } }
+    if (res?.data?.items && Array.isArray(res.data.items)) return res.data.items;
+    // Shape 2: { data: [...] }
+    if (res?.data && Array.isArray(res.data)) return res.data;
+    // Shape 3: { items: [...] }
+    if (res?.items && Array.isArray(res.items)) return res.items;
+    // Shape 4: raw array
+    if (Array.isArray(res)) return res;
+    return null;
+  };
+
+  // Fetch cart and sync state
+  const refreshCart = async () => {
+    try {
+      const res = await api.getCart();
+      console.log("GET /api/v1/cart response:", res);
+      const items = normalizeCartItems(res);
+      if (items !== null) setCart(items);
+    } catch (error) {
+      console.error("Failed to fetch cart:", error);
+    }
+  };
+
   // Fetch Cart globally
   React.useEffect(() => {
-    const fetchInitialCart = async () => {
-      const token = localStorage.getItem("accessToken");
-      if (token && user) {
-        try {
-          const res = await api.getCart();
-          let items = res.data || res.items || res;
-          if (res && res.data && Array.isArray(res.data.items)) {
-            items = res.data.items;
-          }
-          if (Array.isArray(items)) {
-            setCart(items);
-          }
-        } catch (error) {
-          console.error("Failed to fetch initial cart:", error);
-        }
-      }
-    };
-    fetchInitialCart();
+    if (user && localStorage.getItem("accessToken")) {
+      refreshCart();
+    }
   }, [user]);
 
   const login = (email: string, password: string) => {
@@ -199,52 +209,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setWishlistItems(prev => prev.filter(item => (item.productId || item.id) !== productId));
   };
 
+  // POST /api/v1/cart/add
   const addToCart = async (skuId: number, quantity: number, storeId: number) => {
     if (!user) {
       throw new Error("Vui lòng đăng nhập để thêm vào giỏ hàng!");
     }
-    
+    console.log("POST /api/v1/cart/add", { skuId, quantity, storeId });
     const res = await api.addToCart(skuId, quantity, storeId);
-    let items = res.data || res.items || res;
-    if (res && res.data && Array.isArray(res.data.items)) {
-      items = res.data.items;
-    }
-    if (Array.isArray(items)) {
+    console.log("POST /api/v1/cart/add response:", res);
+    const items = normalizeCartItems(res);
+    if (items !== null) {
       setCart(items);
     } else {
-      const cartRes = await api.getCart();
-      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
-      if (Array.isArray(newItems)) setCart(newItems);
+      // fallback: re-fetch from server
+      await refreshCart();
     }
   };
 
+  // DELETE /api/v1/cart/{id}
   const removeFromCart = async (cartItemId: number) => {
+    console.log("DELETE /api/v1/cart/" + cartItemId);
     const res = await api.removeCartItem(cartItemId);
-    let items = res.data || res.items || res;
-    if (res && res.data && Array.isArray(res.data.items)) {
-      items = res.data.items;
-    }
-    if (Array.isArray(items)) {
+    console.log("DELETE /api/v1/cart response:", res);
+    const items = normalizeCartItems(res);
+    if (items !== null) {
       setCart(items);
     } else {
-      const cartRes = await api.getCart();
-      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
-      if (Array.isArray(newItems)) setCart(newItems);
+      await refreshCart();
     }
   };
 
+  // PUT /api/v1/cart/{id}
   const updateCartItem = async (cartItemId: number, quantity: number) => {
+    console.log("PUT /api/v1/cart/" + cartItemId, { quantity });
     const res = await api.updateCartItem(cartItemId, quantity);
-    let items = res.data || res.items || res;
-    if (res && res.data && Array.isArray(res.data.items)) {
-      items = res.data.items;
-    }
-    if (Array.isArray(items)) {
+    console.log("PUT /api/v1/cart response:", res);
+    const items = normalizeCartItems(res);
+    if (items !== null) {
       setCart(items);
     } else {
-      const cartRes = await api.getCart();
-      const newItems = cartRes.data?.items || cartRes.items || cartRes.data || cartRes;
-      if (Array.isArray(newItems)) setCart(newItems);
+      await refreshCart();
     }
   };
 

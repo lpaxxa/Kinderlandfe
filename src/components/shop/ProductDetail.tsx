@@ -17,7 +17,7 @@ export default function ProductDetail() {
 
   const [skus, setSkus] = useState<any[]>([]);
   const [selectedSku, setSelectedSku] = useState<any>(null);
-  
+
   const [stores, setStores] = useState<any[]>([]);
   const [inventories, setInventories] = useState<any[]>([]);
 
@@ -69,14 +69,14 @@ export default function ProductDetail() {
       try {
         const storesRes = await api.get("/api/v1/stores");
         setStores(storesRes.data || []);
-        
+
         // Temporarily fake inventory since backend returns 401
         const mockInventories = storesRes.data?.map((store: any) => ({
-             storeId: store.id,
-             skuId: selectedSku?.id || 1, // Fallback to 1 if no selected sku yet
-             quantity: Math.floor(Math.random() * 50) + 1 
+          storeId: store.id,
+          skuId: 1,
+          quantity: Math.floor(Math.random() * 50) + 1
         })) || [];
-        
+
         setInventories(mockInventories);
       } catch (error) {
         console.error("Lỗi lấy stores:", error);
@@ -117,8 +117,8 @@ export default function ProductDetail() {
         let seed = store.id * 100 + selectedSku.id;
         // Simple pseudo-random using seed to always return same stock for a SKU in a store
         const x = Math.sin(seed++) * 10000;
-        const randomStock = Math.floor((x - Math.floor(x)) * 50) + 0; 
-        
+        const randomStock = Math.floor((x - Math.floor(x)) * 50) + 0;
+
         return {
           storeId: store.id,
           skuId: selectedSku.id,
@@ -206,13 +206,11 @@ export default function ProductDetail() {
       // Since actual GPS logic is missing, default to the first available store
       let closestStore = availableStores[0];
       if (userAddresses.length > 0) {
-        // If we want real comparison, we string match city/district here.
-        // Doing a simple fallback for now
         closestStore = availableStores[0];
       }
 
       await addToCart(selectedSku.id, quantity, closestStore.id);
-      
+
       toast.success('✅ Thêm vào giỏ hàng thành công!', {
         description: `${quantity} x ${product.name} (Từ ${closestStore.name})`,
         duration: 2000,
@@ -267,13 +265,12 @@ export default function ProductDetail() {
             </span>
           </div>
 
-
           <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.description}</p>
 
           {(() => {
             const discountPercent = product.discount || 0;
             const currentOriginalPrice = selectedSku ? selectedSku.price : (product.originalPrice || product.price);
-            const currentFinalPrice = discountPercent > 0 
+            const currentFinalPrice = discountPercent > 0
               ? currentOriginalPrice - (currentOriginalPrice * discountPercent) / 100
               : currentOriginalPrice;
 
@@ -293,8 +290,8 @@ export default function ProductDetail() {
 
                 {selectedSku && (
                   <div className="text-sm text-gray-500 mt-2 font-medium">
-                    Loại: <span className="text-gray-800">{selectedSku.skuCode}</span> 
-                    {selectedSku.size && ` | Size: ${selectedSku.size}`} 
+                    Loại: <span className="text-gray-800">{selectedSku.skuCode}</span>
+                    {selectedSku.size && ` | Size: ${selectedSku.size}`}
                     {selectedSku.color && ` | Color: ${selectedSku.color}`}
                   </div>
                 )}
@@ -308,7 +305,7 @@ export default function ProductDetail() {
                 {selectedSku && (
                   <div className="text-sm text-gray-500 mt-2 font-medium">
                     Loại: <span className="text-gray-800">{selectedSku.skuCode}</span>
-                    {selectedSku.size && ` | Size: ${selectedSku.size}`} 
+                    {selectedSku.size && ` | Size: ${selectedSku.size}`}
                     {selectedSku.color && ` | Color: ${selectedSku.color}`}
                   </div>
                 )}
@@ -320,7 +317,6 @@ export default function ProductDetail() {
             <p className="font-semibold mb-2">Chọn loại:</p>
 
             <div className="flex flex-wrap gap-2">
-
               {skus.map((sku: any) => (
                 <button
                   key={sku.id}
@@ -334,11 +330,10 @@ export default function ProductDetail() {
                   {sku.skuCode}
                 </button>
               ))}
-
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 mt-4">
             <label className="block text-sm font-bold text-gray-700 mb-3">
               Số lượng:
             </label>
@@ -365,84 +360,59 @@ export default function ProductDetail() {
             </p>
           </div>
 
-            <button
-              onClick={handleAddToCart}
-              disabled={currentStock === 0}
-              className="w-full bg-[#AF140B] text-white py-4 rounded-2xl hover:bg-[#8D0F08] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
-            >
-              <ShoppingCart className="size-6" />
-              {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
-            </button>
+          <button
+            onClick={handleAddToCart}
+            disabled={currentStock === 0}
+            className="w-full bg-[#AF140B] text-white py-4 rounded-2xl hover:bg-[#8D0F08] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
+          >
+            <ShoppingCart className="size-6" />
+            {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
+          </button>
 
           {/* Add to Wishlist Button */}
           {(() => {
-             const productId = product.id && typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-             const wishlistItem = wishlistItems.find(item => (item.productId || item.id) === productId);
-             const isLiked = !!wishlistItem;
+            const productId = product.id && typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+            const wishlistItem = wishlistItems?.find(item => (item.productId || item.id) === productId);
+            const isLiked = !!wishlistItem;
 
-             return (
-               <button
-                 onClick={async () => {
-                   try {
-                     if (isLiked) {
-                        const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
-                        const response = await api.removeWishlist(targetId);
-                        const items = response.data?.items || response.items || response.data || [];
-                        if (Array.isArray(items)) setWishlistItems(items);
-                        toast.success("Đã xóa khỏi yêu thích", {
-                          description: product.name,
-                          duration: 2000,
-                        });
-                     } else {
-                        const response = await api.addWishlist(productId);
-                        const items = response.data?.items || response.items || response.data || [];
-                        if (Array.isArray(items)) setWishlistItems(items);
-                        toast.success('❤️ Đã thêm vào yêu thích', {
-                          description: product.name,
-                          duration: 2000,
-                        });
-                     }
-                   } catch (error: any) {
-                     const errorMsg = error.message || "";
-                     if (errorMsg.includes('400') || errorMsg.includes('already') || errorMsg.includes('đã có')) {
-                       toast.error('Sản phẩm đã có trong danh sách yêu thích');
-                     } else {
-                       toast.error("Có lỗi xảy ra, vui lòng thử lại!");
-                     }
-                   }
-                 }}
-                 className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg group"
-               >
-                 <Heart className={`size-6 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-[#AF140B] group-hover:fill-[#AF140B]"}`} />
-                 {isLiked ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
-               </button>
-             );
+            return (
+              <button
+                onClick={async () => {
+                  try {
+                    if (isLiked) {
+                      const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
+                      const response = await api.removeWishlist(targetId);
+                      const items = response.data?.items || response.items || response.data || [];
+                      if (Array.isArray(items) && setWishlistItems) setWishlistItems(items);
+                      toast.success("Đã xóa khỏi yêu thích", {
+                        description: product.name,
+                        duration: 2000,
+                      });
+                    } else {
+                      const response = await api.addWishlist(productId);
+                      const items = response.data?.items || response.items || response.data || [];
+                      if (Array.isArray(items) && setWishlistItems) setWishlistItems(items);
+                      toast.success('❤️ Đã thêm vào yêu thích', {
+                        description: product.name,
+                        duration: 2000,
+                      });
+                    }
+                  } catch (error: any) {
+                    const errorMsg = error.message || "";
+                    if (errorMsg.includes('400') || errorMsg.includes('already') || errorMsg.includes('đã có')) {
+                      toast.error('Sản phẩm đã có trong danh sách yêu thích');
+                    } else {
+                      toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+                    }
+                  }
+                }}
+                className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg group"
+              >
+                <Heart className={`size-6 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-[#AF140B] group-hover:fill-[#AF140B]"}`} />
+                {isLiked ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+              </button>
+            );
           })()}
-
-          {/* Add to Wishlist Button */}
-          <button
-            onClick={async () => {
-              try {
-                await api.addWishlist(product.id);
-                toast.success("❤️ Đã thêm vào yêu thích", {
-                  description: product.name,
-                  duration: 2000,
-                });
-              } catch (error: any) {
-                if (error.status === 400) {
-                  toast.info("Sản phẩm đã có trong danh sách yêu thích", {
-                    duration: 2000,
-                  });
-                } else {
-                  toast.error("Không thể thêm vào yêu thích");
-                }
-              }
-            }}
-            className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg"
-          >
-            <Heart className="size-6" />
-            Thêm vào yêu thích
-          </button>
 
           {/* Find in Store Button */}
           <button
@@ -511,9 +481,18 @@ export default function ProductDetail() {
             </Link>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">
-            Sản phẩm này hiện không có tại cửa hàng. Vui lòng đặt hàng online.
-          </p>
+          <div>
+            <p className="text-gray-600 text-sm mb-4">
+              Kiểm tra sản phẩm này có sẵn tại cửa hàng Kinderland gần bạn không.
+            </p>
+            <button
+              onClick={() => setShowStoreModal(true)}
+              className="flex items-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm"
+            >
+              <MapPin className="size-4" />
+              Xem tình trạng tại cửa hàng →
+            </button>
+          </div>
         )}
       </div>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -8,337 +8,292 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, FileText,
   Warehouse, DollarSign, LogOut, Settings, Shield, UserCog, BarChart3,
   Megaphone, MessageSquare, Star, ClipboardList, LockKeyhole,
-  UserPlus, Eye, Activity
+  UserPlus, Eye, Activity, Menu, X, Home, ChevronRight, Bell
 } from 'lucide-react';
 
 export default function EnhancedAdminDashboard() {
   const navigate = useNavigate();
   const { adminUser, logoutAdmin } = useAdmin();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // Statistics data
   const stats = [
-    { label: 'Tổng đơn hàng', value: '1,245', change: '+18.2%', icon: ShoppingCart, color: 'text-[#AF140B]', bg: 'bg-[#AF140B]/10' },
-    { label: 'Doanh thu tháng này', value: '₫842M', change: '+23.5%', icon: DollarSign, color: 'text-[#D4AF37]', bg: 'bg-[#D4AF37]/10' },
-    { label: 'Khách hàng mới', value: '356', change: '+12.3%', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: 'Tỷ lệ chuyển đổi', value: '3.8%', change: '+0.4%', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100' },
+    { label: 'Tổng đơn hàng', value: '1,245', change: '+18.2%', icon: ShoppingCart, bg: 'bg-[#AF140B]' },
+    { label: 'Doanh thu tháng này', value: '₫842M', change: '+23.5%', icon: DollarSign, bg: 'bg-[#D4AF37]' },
+    { label: 'Khách hàng mới', value: '356', change: '+12.3%', icon: Users, bg: 'bg-blue-600' },
+    { label: 'Tỷ lệ chuyển đổi', value: '3.8%', change: '+0.4%', icon: TrendingUp, bg: 'bg-green-600' },
   ];
 
-  // Admin features grouped by category
-  const featureGroups = [
+  // Sidebar navigation items
+  const sidebarItems = [
     {
-      title: 'Quản lý Sản phẩm & Danh mục',
-      description: 'Quản lý toàn bộ danh mục sản phẩm',
-      features: [
-        { 
-          title: 'Quản lý Sản phẩm', 
-          description: 'Thêm, sửa, xóa sản phẩm (UC-18, UC-45, UC-46, UC-47)', 
-          icon: Package,
-          path: '/admin/products',
-          color: 'bg-[#AF140B]'
-        },
-        { 
-          title: 'Quản lý Danh mục', 
-          description: 'Tạo và quản lý danh mục (UC-19)', 
-          icon: LayoutDashboard,
-          path: '/admin/categories',
-          color: 'bg-[#AF140B]'
-        },
+      section: 'Sản phẩm & Danh mục',
+      items: [
+        { title: 'Quản lý Sản phẩm', icon: Package, path: '/admin/products' },
+        { title: 'Quản lý Danh mục', icon: LayoutDashboard, path: '/admin/categories' },
       ]
     },
     {
-      title: 'Quản lý Đơn hàng',
-      description: 'Xử lý và theo dõi đơn hàng',
-      features: [
-        { 
-          title: 'Quản lý Đơn hàng', 
-          description: 'Xem và xử lý tất cả đơn hàng (UC-20)', 
-          icon: ShoppingCart,
-          path: '/admin/orders',
-          color: 'bg-[#D4AF37]'
-        },
-        { 
-          title: 'Xử lý Hoàn trả', 
-          description: 'Duyệt yêu cầu trả hàng và hoàn tiền (UC-24)', 
-          icon: ClipboardList,
-          path: '/admin/returns',
-          color: 'bg-[#D4AF37]'
-        },
+      section: 'Đơn hàng',
+      items: [
+        { title: 'Quản lý Đơn hàng', icon: ShoppingCart, path: '/admin/orders' },
+        { title: 'Xử lý Hoàn trả', icon: ClipboardList, path: '/admin/returns' },
       ]
     },
     {
-      title: 'Marketing & Khuyến mãi',
-      description: 'Quản lý chương trình khuyến mãi và nội dung',
-      features: [
-        { 
-          title: 'Quản lý Khuyến mãi', 
-          description: 'Tạo mã giảm giá và chương trình khuyến mãi (UC-21)', 
-          icon: Megaphone,
-          path: '/admin/promotions',
-          color: 'bg-purple-600'
-        },
-        { 
-          title: 'Quản lý Blog', 
-          description: 'Tạo và chỉnh sửa bài viết (UC-25)', 
-          icon: FileText,
-          path: '/admin/blog',
-          color: 'bg-purple-600'
-        },
-        { 
-          title: 'Quản lý Chính sách', 
-          description: 'Cập nhật chính sách website (UC-48)', 
-          icon: Shield,
-          path: '/admin/policies',
-          color: 'bg-purple-600'
-        },
-        { 
-          title: 'Quản lý Đánh giá', 
-          description: 'Duyệt và phản hồi đánh giá (UC-31)', 
-          icon: MessageSquare,
-          path: '/admin/reviews',
-          color: 'bg-purple-600'
-        },
+      section: 'Marketing',
+      items: [
+        { title: 'Quản lý Khuyến mãi', icon: Megaphone, path: '/admin/promotions' },
+        { title: 'Quản lý Blog', icon: FileText, path: '/admin/blog' },
+        { title: 'Quản lý Chính sách', icon: Shield, path: '/admin/policies' },
+        { title: 'Quản lý Đánh giá', icon: MessageSquare, path: '/admin/reviews' },
       ]
     },
     {
-      title: 'Quản lý Người dùng & Phân quyền',
-      description: 'Quản lý tài khoản và quyền truy cập',
-      features: [
-        { 
-          title: 'Quản lý Người dùng', 
-          description: 'Quản lý tất cả tài khoản khách hàng (UC-22)', 
-          icon: Users,
-          path: '/admin/users',
-          color: 'bg-indigo-600'
-        },
-        { 
-          title: 'Quản lý Phân quyền', 
-          description: 'Thiết lập quyền truy cập (UC-43)', 
-          icon: Shield,
-          path: '/admin/permissions',
-          color: 'bg-indigo-600'
-        },
-        { 
-          title: 'Thêm Quyền cho Role', 
-          description: 'Gán quyền cho vai trò (UC-44)', 
-          icon: UserPlus,
-          path: '/admin/role-permissions',
-          color: 'bg-indigo-600'
-        },
+      section: 'Người dùng & Phân quyền',
+      items: [
+        { title: 'Quản lý Người dùng', icon: Users, path: '/admin/users' },
+        { title: 'Quản lý Phân quyền', icon: Shield, path: '/admin/permissions' },
+        { title: 'Thêm Quyền cho Role', icon: UserPlus, path: '/admin/role-permissions' },
       ]
     },
     {
-      title: 'Báo cáo & Tài chính',
-      description: 'Xem báo cáo và thống kê kinh doanh',
-      features: [
-        { 
-          title: 'Dashboard Tổng quan', 
-          description: 'Xem thống kê tổng quan (UC-42)', 
-          icon: Activity,
-          path: '/admin/overview',
-          color: 'bg-green-600'
-        },
-        { 
-          title: 'Báo cáo Chi tiết', 
-          description: 'Xem báo cáo doanh số, tồn kho (UC-23)', 
-          icon: BarChart3,
-          path: '/admin/reports',
-          color: 'bg-green-600'
-        },
-        { 
-          title: 'Quản lý Tài chính', 
-          description: 'Theo dõi doanh thu, chi phí (UC-26)', 
-          icon: DollarSign,
-          path: '/admin/financial',
-          color: 'bg-green-600'
-        },
+      section: 'Báo cáo & Tài chính',
+      items: [
+        { title: 'Dashboard Tổng quan', icon: Activity, path: '/admin/overview' },
+        { title: 'Báo cáo Chi tiết', icon: BarChart3, path: '/admin/reports' },
+        { title: 'Quản lý Tài chính', icon: DollarSign, path: '/admin/financial' },
       ]
     },
     {
-      title: 'Cài đặt Tài khoản',
-      description: 'Quản lý tài khoản cá nhân',
-      features: [
-        { 
-          title: 'Đổi Mật khẩu', 
-          description: 'Thay đổi mật khẩu đăng nhập (UC-39)', 
-          icon: LockKeyhole,
-          path: '/admin/change-password',
-          color: 'bg-gray-600'
-        },
-        { 
-          title: 'Cài đặt Hệ thống', 
-          description: 'Cấu hình hệ thống', 
-          icon: Settings,
-          path: '/admin/settings',
-          color: 'bg-gray-600'
-        },
+      section: 'Cài đặt',
+      items: [
+        { title: 'Đổi Mật khẩu', icon: LockKeyhole, path: '/admin/change-password' },
+        { title: 'Cài đặt Hệ thống', icon: Settings, path: '/admin/settings' },
       ]
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#AF140B] rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#2C2C2C]">Administrator Dashboard</h1>
-                <p className="text-sm text-gray-600">
-                  {adminUser?.name} - Toàn quyền quản trị
-                </p>
-              </div>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Top Header Bar */}
+      <header className="bg-[#AF140B] text-white sticky top-0 z-30 shadow-lg">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-1.5 rounded-md hover:bg-white/20 transition-colors"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <Shield className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                className="border-gray-300"
-              >
-                Về trang chủ
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="border-[#AF140B] text-[#AF140B] hover:bg-[#AF140B] hover:text-white"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Đăng xuất
-              </Button>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">Administrator Dashboard</h1>
+              <p className="text-[11px] text-white/80 leading-tight">Toàn quyền quản trị</p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium leading-tight">{adminUser?.name}</p>
+              <p className="text-[11px] text-white/80 leading-tight">Administrator</p>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="text-white hover:bg-white/20 border border-white/30 h-8 text-sm px-3"
+            >
+              <Home className="w-4 h-4 mr-1.5" />
+              Trang chủ
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="text-white hover:bg-white/20 border border-white/30 h-8 text-sm px-3"
+            >
+              <LogOut className="w-4 h-4 mr-1.5" />
+              Đăng xuất
+            </Button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold text-[#2C2C2C] mb-1">{stat.value}</p>
-                      <p className="text-xs text-green-600 font-medium">{stat.change}</p>
-                    </div>
-                    <div className={`${stat.bg} p-3 rounded-lg`}>
-                      <Icon className={`w-6 h-6 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside
+          className={`bg-[#AF140B] overflow-y-auto transition-all duration-300 flex-shrink-0 ${
+            sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
+          }`}
+          style={{ height: 'calc(100vh - 56px)' }}
+        >
+          <nav className="py-3">
+            {sidebarItems.map((group, groupIndex) => (
+              <div key={groupIndex} className="mb-1">
+                <h3 className="px-4 py-2 text-[11px] font-bold text-white/60 uppercase tracking-wider">
+                  {group.section}
+                </h3>
+                {group.items.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => navigate(item.path)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-white/90 hover:bg-white/15 hover:text-white transition-colors group border-l-3 border-transparent hover:border-white"
+                    >
+                      <Icon className="w-4 h-4 text-white/60 group-hover:text-white transition-colors flex-shrink-0" />
+                      <span className="truncate">{item.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Welcome Banner */}
-        <Card className="border-0 shadow-md bg-gradient-to-r from-[#AF140B] to-[#8D0F08] text-white mb-8">
-          <CardContent className="p-6">
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6 bg-white" style={{ height: 'calc(100vh - 56px)' }}>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={index} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                        <p className="text-2xl font-bold text-gray-900 mb-0.5">{stat.value}</p>
+                        <p className="text-xs text-green-600 font-medium">{stat.change}</p>
+                      </div>
+                      <div className={`${stat.bg} p-2.5 rounded-lg`}>
+                        <Icon className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Welcome Banner */}
+          <div className="bg-gradient-to-r from-[#AF140B] to-[#D91810] rounded-xl p-5 mb-6 text-white shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-2">Chào mừng trở lại, {adminUser?.name}!</h2>
-                <p className="text-white/90">
+                <h2 className="text-xl font-bold mb-1">Chào mừng trở lại, {adminUser?.name}! 👋</h2>
+                <p className="text-white/85 text-sm">
                   Bạn có toàn quyền quản trị hệ thống Kinderland. Quản lý sản phẩm, đơn hàng, khuyến mãi và nhiều hơn nữa.
                 </p>
               </div>
               <div className="hidden md:block">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <Shield className="w-10 h-10 text-white" />
+                <div className="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Shield className="w-8 h-8 text-white" />
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Feature Groups */}
-        <div className="space-y-6">
-          {featureGroups.map((group, groupIndex) => (
-            <Card key={groupIndex} className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-xl text-[#2C2C2C]">{group.title}</CardTitle>
-                <CardDescription>{group.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.features.map((feature, index) => {
-                    const Icon = feature.icon;
-                    return (
+          {/* Quick Actions */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">Thao tác nhanh</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Thêm sản phẩm', icon: Package, path: '/admin/products', color: 'bg-[#AF140B]', hover: 'hover:border-[#AF140B]', textHover: 'group-hover:text-[#AF140B]' },
+              { label: 'Tạo khuyến mãi', icon: Megaphone, path: '/admin/promotions', color: 'bg-[#D4AF37]', hover: 'hover:border-[#D4AF37]', textHover: 'group-hover:text-[#D4AF37]' },
+              { label: 'Quản lý user', icon: Users, path: '/admin/users', color: 'bg-indigo-600', hover: 'hover:border-indigo-500', textHover: 'group-hover:text-indigo-600' },
+              { label: 'Xem báo cáo', icon: BarChart3, path: '/admin/reports', color: 'bg-green-600', hover: 'hover:border-green-500', textHover: 'group-hover:text-green-600' },
+            ].map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => navigate(item.path)}
+                  className={`flex flex-col items-center gap-2 p-4 bg-white border-2 border-gray-200 rounded-xl ${item.hover} hover:shadow-md transition-all group`}
+                >
+                  <div className={`w-10 h-10 ${item.color} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <span className={`text-sm font-medium text-gray-700 ${item.textHover}`}>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Feature Overview Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[
+              {
+                title: 'Quản lý Sản phẩm & Danh mục',
+                icon: Package,
+                iconColor: 'text-[#AF140B]',
+                items: [
+                  { label: 'Quản lý Sản phẩm', desc: 'Thêm, sửa, xóa sản phẩm', path: '/admin/products' },
+                  { label: 'Quản lý Danh mục', desc: 'Tạo và quản lý danh mục', path: '/admin/categories' },
+                ],
+              },
+              {
+                title: 'Quản lý Đơn hàng',
+                icon: ShoppingCart,
+                iconColor: 'text-[#D4AF37]',
+                items: [
+                  { label: 'Quản lý Đơn hàng', desc: 'Xem và xử lý tất cả đơn hàng', path: '/admin/orders' },
+                  { label: 'Xử lý Hoàn trả', desc: 'Duyệt yêu cầu trả hàng', path: '/admin/returns' },
+                ],
+              },
+              {
+                title: 'Marketing & Khuyến mãi',
+                icon: Megaphone,
+                iconColor: 'text-purple-600',
+                items: [
+                  { label: 'Quản lý Khuyến mãi', desc: 'Tạo mã giảm giá', path: '/admin/promotions' },
+                  { label: 'Quản lý Blog', desc: 'Tạo và chỉnh sửa bài viết', path: '/admin/blog' },
+                  { label: 'Quản lý Đánh giá', desc: 'Duyệt và phản hồi đánh giá', path: '/admin/reviews' },
+                ],
+              },
+              {
+                title: 'Người dùng & Phân quyền',
+                icon: Users,
+                iconColor: 'text-indigo-600',
+                items: [
+                  { label: 'Quản lý Người dùng', desc: 'Quản lý tài khoản khách hàng', path: '/admin/users' },
+                  { label: 'Quản lý Phân quyền', desc: 'Thiết lập quyền truy cập', path: '/admin/permissions' },
+                  { label: 'Thêm Quyền cho Role', desc: 'Gán quyền cho vai trò', path: '/admin/role-permissions' },
+                ],
+              },
+            ].map((group, groupIdx) => {
+              const GroupIcon = group.icon;
+              return (
+                <Card key={groupIdx} className="bg-white border border-gray-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-gray-800">
+                      <GroupIcon className={`w-4 h-4 ${group.iconColor}`} />
+                      {group.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {group.items.map((item, idx) => (
                       <button
-                        key={index}
-                        onClick={() => navigate(feature.path)}
-                        className="text-left p-4 rounded-lg border-2 border-gray-200 hover:border-[#AF140B] hover:shadow-md transition-all group"
+                        key={idx}
+                        onClick={() => navigate(item.path)}
+                        className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-[#AF140B]/5 hover:shadow-sm transition-all group"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className={`${feature.color} p-2.5 rounded-lg group-hover:scale-110 transition-transform`}>
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-[#2C2C2C] mb-1 group-hover:text-[#AF140B] transition-colors">
-                              {feature.title}
-                            </h3>
-                            <p className="text-xs text-gray-600 line-clamp-2">
-                              {feature.description}
-                            </p>
-                          </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-gray-800 group-hover:text-[#AF140B]">{item.label}</p>
+                          <p className="text-xs text-gray-500">{item.desc}</p>
                         </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#AF140B]" />
                       </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-md mt-6">
-          <CardHeader>
-            <CardTitle className="text-xl text-[#2C2C2C]">Thao tác nhanh</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                onClick={() => navigate('/admin/products')}
-                className="bg-[#AF140B] hover:bg-[#8D0F08] h-auto py-4 flex-col gap-2"
-              >
-                <Package className="w-6 h-6" />
-                <span>Thêm sản phẩm</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/admin/promotions')}
-                className="bg-[#D4AF37] hover:bg-[#B8860B] h-auto py-4 flex-col gap-2"
-              >
-                <Megaphone className="w-6 h-6" />
-                <span>Tạo khuyến mãi</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/admin/users')}
-                className="bg-indigo-600 hover:bg-indigo-700 h-auto py-4 flex-col gap-2"
-              >
-                <Users className="w-6 h-6" />
-                <span>Quản lý user</span>
-              </Button>
-              <Button 
-                onClick={() => navigate('/admin/reports')}
-                className="bg-green-600 hover:bg-green-700 h-auto py-4 flex-col gap-2"
-              >
-                <BarChart3 className="w-6 h-6" />
-                <span>Xem báo cáo</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </main>
       </div>
     </div>
   );

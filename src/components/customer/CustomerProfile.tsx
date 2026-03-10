@@ -1,27 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useApp } from "../../context/AppContext";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import { Badge } from "../ui/badge";
-import { toast } from "sonner";
-import api from "../../services/api";
-
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router';
+import { useApp } from '../../context/AppContext';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
+import { toast } from 'sonner';
 import {
   User,
   Mail,
   Phone,
-  MapPin,
   Edit,
   Save,
   X,
   ArrowLeft,
   Shield,
-} from "lucide-react";
-
+  Loader2,
+} from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../ui/alert-dialog";
+} from '../ui/alert-dialog';
+import { accountApi, UserResponse } from '../../services/accountApi';
+import api from '../../services/api';
 
 interface Address {
   addressId: number;
@@ -51,27 +49,73 @@ export default function CustomerProfile() {
   const { user } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState<UserResponse | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [formData, setFormData] = useState({
-    name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: "",
-    dateOfBirth: "",
-    gender: "Other",
-  });
-
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
 
-  const [addressForm, setAddressForm] = useState({
-    street: "",
-    provinceId: "",
-    provinceName: "",
-    districtId: "",
-    districtName: "",
-    wardId: "",
-    wardName: "",
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
   });
+
+  const [addressForm, setAddressForm] = useState({
+    street: '',
+    provinceId: '',
+    provinceName: '',
+    districtId: '',
+    districtName: '',
+    wardId: '',
+    wardName: '',
+  });
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await accountApi.getProfile();
+      if (response && response.data) {
+        setProfileData(response.data);
+        setFormData({
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          email: response.data.email || '',
+          phone: response.data.phone || '',
+        });
+      }
+    } catch (error) {
+      toast.error('Không thể tải thông tin tài khoản');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      const res = await api.get('/api/v1/address/my-addresses');
+      console.log('Address response:', res);
+      setAddresses(res.data || []);
+    } catch (error) {
+      console.error('Fetch address error:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchAddresses();
+  }, []);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setAddressForm({
@@ -79,100 +123,71 @@ export default function CustomerProfile() {
       [e.target.name]: e.target.value,
     });
   };
+
   const startEditAddress = (addr: Address) => {
     setEditingAddressId(addr.addressId);
-
     setAddressForm({
-      street: addr.street || "",
-      provinceId: addr.provinceId || "",
-      provinceName: addr.provinceName || "",
-      districtId: addr.districtId || "",
-      districtName: addr.districtName || "",
-      wardId: addr.wardId || "",
-      wardName: addr.wardName || "",
+      street: addr.street || '',
+      provinceId: addr.provinceId || '',
+      provinceName: addr.provinceName || '',
+      districtId: addr.districtId || '',
+      districtName: addr.districtName || '',
+      wardId: addr.wardId || '',
+      wardName: addr.wardName || '',
     });
   };
 
   const updateAddress = async () => {
     try {
-      await api.put(
-        `/api/v1/address/update/${editingAddressId}`,
-        addressForm
-      );
-
-      toast.success("Cập nhật địa chỉ thành công");
-
+      await api.put(`/api/v1/address/update/${editingAddressId}`, addressForm);
+      toast.success('Cập nhật địa chỉ thành công');
       setEditingAddressId(null);
-
-      // reload address
-      const res = await api.get("/api/v1/address/my-addresses");
-      setAddresses(res.data);
-
+      await fetchAddresses();
     } catch (error) {
       console.error(error);
-      toast.error("Cập nhật địa chỉ thất bại");
+      toast.error('Cập nhật địa chỉ thất bại');
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
   };
 
   const handleSave = async () => {
     try {
-
-      const nameParts = formData.name.trim().split(" ");
-      const firstName = nameParts.slice(0, -1).join(" ");
-      const lastName = nameParts.slice(-1).join("");
-
-      const payload = {
+      setSaving(true);
+      await accountApi.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         phone: formData.phone,
-        firstName: firstName,
-        lastName: lastName
-      };
-
-      await api.post("/api/v1/account/update-profile", payload);
-
-      toast.success("Cập nhật thông tin thành công!");
-
+      });
+      toast.success('Cập nhật thông tin thành công!');
       setIsEditing(false);
-
-    } catch (error) {
+      // Refresh data
+      await fetchProfile();
+    } catch (error: any) {
+      toast.error(error.message || 'Cập nhật thất bại');
       console.error(error);
-      toast.error("Cập nhật thất bại");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user?.name || "",
-      email: user?.email || "",
-      phone: user?.phone || "",
-      address: user?.address || "",
-      dateOfBirth: "1990-05-15",
-      gender: "female",
-    });
+    if (profileData) {
+      setFormData({
+        firstName: profileData.firstName || '',
+        lastName: profileData.lastName || '',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+      });
+    }
     setIsEditing(false);
   };
 
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      try {
-        const res = await api.get("/api/v1/address/my-addresses");
-
-        console.log("Address response:", res);
-
-        setAddresses(res.data);
-      } catch (error) {
-        console.error("Fetch address error:", error);
-      }
-    };
-
-    fetchAddresses();
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -186,7 +201,7 @@ export default function CustomerProfile() {
 
           <CardContent className="flex items-center gap-6 -mt-12 pb-8 px-8">
             <div className="w-24 h-24 rounded-full bg-white shadow-2xl border-4 border-white flex items-center justify-center text-3xl font-bold text-[#AF140B] transform transition-transform hover:scale-105">
-              {(user?.username || user?.name || "U").charAt(0).toUpperCase()}
+              {(user?.username || user?.name || 'U').charAt(0).toUpperCase()}
             </div>
 
             <div className="flex-1">
@@ -256,28 +271,40 @@ export default function CustomerProfile() {
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-5">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* First Name */}
+                  <div>
+                    <Label htmlFor="firstName">Họ *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-10"
+                        placeholder="Nhập họ"
+                      />
+                    </div>
+                  </div>
 
-                {/* NAME */}
-
-                <div>
-                  <Label className="text-gray-800 font-medium text-sm">
-                    Họ và tên *
-                  </Label>
-
-                  <div className="relative">
-
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
-
-                    <Input
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="pl-10 border-gray-300 focus:border-red-500 focus:ring-red-500"
-                      placeholder="Nhập họ và tên"
-                    />
-
+                  {/* Last Name */}
+                  <div>
+                    <Label htmlFor="lastName">Tên *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-10"
+                        placeholder="Nhập tên"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -300,8 +327,8 @@ export default function CustomerProfile() {
 
                   </div>
 
-                  <p className="text-xs text-gray-600 mt-1">
-                    Email không thể thay đổi
+                  <p className="text-xs text-gray-500 mt-1">
+                    Email đăng nhập không thể thay đổi
                   </p>
 
                 </div>
@@ -329,127 +356,59 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
-
-
-
                 {/* ADDRESS */}
+                {addresses.length > 0 && (
+                  <div>
+                    <Label className="text-gray-800 font-medium text-sm">
+                      Địa chỉ
+                    </Label>
+                    <div className="space-y-2 mt-2">
+                      {addresses.map((addr) => (
+                        <div
+                          key={addr.addressId}
+                          className="p-3 border rounded-lg text-sm bg-gray-50 space-y-2"
+                        >
+                          <p>{addr.fullAddress}</p>
 
-                <div>
-                  <Label className="text-gray-800 font-medium text-sm">
-                    Địa chỉ
-                  </Label>
-
-                  <div className="relative">
-
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-
-                    <div className="space-y-2">
-                      {addresses.length === 0 ? (
-                        <p className="text-sm text-gray-500">Chưa có địa chỉ</p>
-                      ) : (
-                        addresses.map((addr) => (
-                          <div
-                            key={addr.addressId}
-                            className="p-3 border rounded-lg text-sm bg-gray-50 space-y-2"
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startEditAddress(addr)}
                           >
-                            <p>{addr.fullAddress}</p>
+                            Sửa
+                          </Button>
 
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => startEditAddress(addr)}
-                            >
-                              Sửa
-                            </Button>
-
-                            {editingAddressId === addr.addressId && (
-                              <div className="mt-3 space-y-2 bg-white p-3 rounded border">
-
-                                <Input
-                                  name="street"
-                                  placeholder="Street"
-                                  value={addressForm.street}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="provinceName"
-                                  placeholder="Province Name"
-                                  value={addressForm.provinceName}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="provinceId"
-                                  placeholder="Province ID"
-                                  value={addressForm.provinceId}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="districtName"
-                                  placeholder="District Name"
-                                  value={addressForm.districtName}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="districtId"
-                                  placeholder="District ID"
-                                  value={addressForm.districtId}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="wardName"
-                                  placeholder="Ward Name"
-                                  value={addressForm.wardName}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <Input
-                                  name="wardId"
-                                  placeholder="Ward ID"
-                                  value={addressForm.wardId}
-                                  onChange={handleAddressChange}
-                                />
-
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    className="bg-red-500 text-white"
-                                    onClick={updateAddress}
-                                  >
-                                    Update
-                                  </Button>
-
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setEditingAddressId(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-
+                          {editingAddressId === addr.addressId && (
+                            <div className="mt-3 space-y-2 bg-white p-3 rounded border">
+                              <Input name="street" placeholder="Street" value={addressForm.street} onChange={handleAddressChange} />
+                              <Input name="provinceName" placeholder="Tỉnh/Thành phố" value={addressForm.provinceName} onChange={handleAddressChange} />
+                              <Input name="districtName" placeholder="Quận/Huyện" value={addressForm.districtName} onChange={handleAddressChange} />
+                              <Input name="wardName" placeholder="Phường/Xã" value={addressForm.wardName} onChange={handleAddressChange} />
+                              <div className="flex gap-2">
+                                <Button size="sm" className="bg-red-500 text-white" onClick={updateAddress}>
+                                  Cập nhật
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingAddressId(null)}>
+                                  Hủy
+                                </Button>
                               </div>
-                            )}
-                          </div>
-                        ))
-                      )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-
                   </div>
-                </div>
+                )}
 
+                {/* Action Buttons */}
                 {isEditing && (
                   <div className="flex gap-3 pt-4">
-
-                    <Button
-                      onClick={handleSave}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
+                    <Button onClick={handleSave} className="flex-1 bg-red-500 hover:bg-red-600 text-white" disabled={saving}>
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
                       Lưu thay đổi
                     </Button>
 
@@ -457,6 +416,7 @@ export default function CustomerProfile() {
                       onClick={handleCancel}
                       variant="outline"
                       className="flex-1"
+                      disabled={saving}
                     >
                       <X className="w-4 h-4 mr-2" />
                       Hủy
@@ -534,33 +494,24 @@ export default function CustomerProfile() {
 
               <CardContent className="space-y-3">
 
-                <div className="flex justify-between">
-                  <span className="text-gray-700 text-sm font-medium">
-                    Trạng thái
-                  </span>
-
-                  <Badge className="bg-green-100 text-green-700">
-                    Đã xác thực
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Vai trò</span>
+                  <Badge className={profileData?.role === 'ADMIN' ? 'bg-red-500' : 'bg-green-500'}>
+                    {profileData?.role || 'CUSTOMER'}
                   </Badge>
                 </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-700 text-sm font-medium">
-                    Hạng thành viên
-                  </span>
-
-                  <Badge className="bg-yellow-400 text-white font-semibold shadow-sm">
-                    👑 Gold
-                  </Badge>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Trạng thái</span>
+                  {profileData?.isActive ? (
+                    <Badge className="bg-green-500">Đang hoạt động</Badge>
+                  ) : (
+                    <Badge variant="destructive">Đã khóa</Badge>
+                  )}
                 </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-700 text-sm font-medium">
-                    Tham gia
-                  </span>
-
-                  <span className="font-semibold text-gray-900">
-                    01/2024
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Tham gia</span>
+                  <span className="text-sm font-medium">
+                    {profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                   </span>
                 </div>
 
