@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { ShoppingCart, Heart, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Heart, MapPin, ChevronRight, ArrowLeft, Plus, Minus, Loader2 } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
 import { toast } from 'sonner';
 import api from "../../services/api";
+import { inventoryApi, StoreAvailability } from '../../services/inventoryApi';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -18,8 +19,9 @@ export default function ProductDetail() {
   const [skus, setSkus] = useState<any[]>([]);
   const [selectedSku, setSelectedSku] = useState<any>(null);
 
-  const [stores, setStores] = useState<any[]>([]);
-  const [inventories, setInventories] = useState<any[]>([]);
+  // Real store availability from the API
+  const [storeAvailability, setStoreAvailability] = useState<StoreAvailability[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -63,26 +65,6 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
-
-    // Fetch stores & inventory
-    const fetchStoresAndInventory = async () => {
-      try {
-        const storesRes = await api.get("/api/v1/stores");
-        setStores(storesRes.data || []);
-
-        // Temporarily fake inventory since backend returns 401
-        const mockInventories = storesRes.data?.map((store: any) => ({
-          storeId: store.id,
-          skuId: 1,
-          quantity: Math.floor(Math.random() * 50) + 1
-        })) || [];
-
-        setInventories(mockInventories);
-      } catch (error) {
-        console.error("Lỗi lấy stores:", error);
-      }
-    };
-    fetchStoresAndInventory();
   }, [id]);
 
   useEffect(() => {
@@ -109,30 +91,51 @@ export default function ProductDetail() {
     fetchSkus();
   }, [product]);
 
-  // Temporarily fake inventory since backend returns 401
+  // Fetch real store availability whenever selectedSku changes
   useEffect(() => {
-    if (stores.length > 0 && selectedSku) {
-      // Fix random seed based on store + sku to keep data consistent between renders
-      const mockInventories = stores.map((store: any) => {
-        let seed = store.id * 100 + selectedSku.id;
-        // Simple pseudo-random using seed to always return same stock for a SKU in a store
-        const x = Math.sin(seed++) * 10000;
-        const randomStock = Math.floor((x - Math.floor(x)) * 50) + 0;
-
-        return {
-          storeId: store.id,
-          skuId: selectedSku.id,
-          quantity: randomStock
-        };
-      });
-      setInventories(mockInventories);
+    if (!selectedSku) {
+      setStoreAvailability([]);
+      return;
     }
-  }, [stores, selectedSku]);
 
-  // Derived values for stock must be calculated before hooks if we rely on them inside hooks
-  const selectedSkuInventory = inventories.filter((inv: any) => inv.skuId === selectedSku?.id);
-  const totalSkuStock = selectedSkuInventory.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0);
-  const currentStock = selectedSku ? totalSkuStock : (product ? product.stock : 0);
+    const fetchAvailability = async () => {
+      setAvailabilityLoading(true);
+      try {
+        const res = await inventoryApi.getStoreAvailability(selectedSku.id);
+        console.log("Store availability for SKU", selectedSku.id, ":", res.data);
+        setStoreAvailability(res.data || []);
+      } catch (error) {
+        console.error("Lỗi lấy store availability:", error);
+        setStoreAvailability([]);
+      } finally {
+        setAvailabilityLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [selectedSku]);
+
+  // Stores that have stock — check both quantity and availabilityStatus
+  // (availabilityStatus is always set by backend; quantity may be null if backend hasn't been updated)
+  const storesWithStock = storeAvailability.filter(
+    (store) => {
+      // If quantity is explicitly set, use it
+      if (store.quantity != null && store.quantity > 0) return true;
+      // Fallback: trust availabilityStatus when quantity is missing
+      if (store.availabilityStatus === 'Có sẵn' || store.availabilityStatus === 'Còn ít' || store.availabilityStatus === 'Còn hàng') return true;
+      return false;
+    }
+  );
+
+  // Compute stock from real availability data
+  const totalSkuStock = storeAvailability.reduce(
+    (sum, store) => sum + (store.quantity || 0),
+    0
+  );
+  // If quantity data is available use it; otherwise fallback to storesWithStock count
+  const currentStock = selectedSku
+    ? (totalSkuStock > 0 ? totalSkuStock : storesWithStock.length)
+    : (product ? product.stock : 0);
 
   // Prevent ordering more than available stock or less than 1 (if stock > 0)
   useEffect(() => {
@@ -167,52 +170,26 @@ export default function ProductDetail() {
     }).format(price);
   };
 
-  // Get inventory for a specific store and sku
-  const getStoreSkuQuantity = (storeId: number) => {
-    if (!selectedSku) return 0;
-    const inv = inventories.find(
-      (i: any) => i.storeId === storeId && i.skuId === selectedSku.id
-    );
-    return inv ? inv.quantity : 0;
-  };
-
-  // Check store availability
-  const storesWithStock = stores.filter((store) => {
-    return getStoreSkuQuantity(store.id) > 0;
-  });
-
   const handleAddToCart = async () => {
     try {
       if (!selectedSku) {
         throw new Error("Vui lòng chọn loại sản phẩm!");
       }
 
-      // get user addresses to find nearest store mapping
-      let userAddresses: any[] = [];
-      try {
-        const addrRes = await api.getMyAddresses();
-        userAddresses = addrRes.data || addrRes || [];
-      } catch (e) {
-        // ignore strictly if they are logged in but don't have addresses
-        console.warn("Could not fetch user addresses", e);
-      }
-
-      const availableStores = stores.filter(store => getStoreSkuQuantity(store.id) > 0);
-      if (availableStores.length === 0) {
+      if (storesWithStock.length === 0) {
         throw new Error("Sản phẩm hiện tại đã hết hàng ở tất cả các chi nhánh.");
       }
 
-      // Logic "so sánh address của khách hàng" -> select closest store
-      // Since actual GPS logic is missing, default to the first available store
-      let closestStore = availableStores[0];
-      if (userAddresses.length > 0) {
-        closestStore = availableStores[0];
-      }
+      // Pick the store with the most stock as default
+      const sortedStores = [...storesWithStock].sort(
+        (a, b) => (b.quantity || 0) - (a.quantity || 0)
+      );
+      const bestStore = sortedStores[0];
 
-      await addToCart(selectedSku.id, quantity, closestStore.id);
+      await addToCart(selectedSku.id, quantity, bestStore.storeId);
 
       toast.success('✅ Thêm vào giỏ hàng thành công!', {
-        description: `${quantity} x ${product.name} (Từ ${closestStore.name})`,
+        description: `${quantity} x ${product.name} (Từ ${bestStore.storeName})`,
         duration: 2000,
       });
     } catch (err: any) {
@@ -356,17 +333,23 @@ export default function ProductDetail() {
               </button>
             </div>
             <p className="text-sm text-gray-500 mt-2 font-medium">
-              Còn lại: {currentStock} sản phẩm
+              {availabilityLoading ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="size-3 animate-spin" /> Đang kiểm tra tồn kho...
+                </span>
+              ) : (
+                `Còn lại: ${currentStock} sản phẩm`
+              )}
             </p>
           </div>
 
           <button
             onClick={handleAddToCart}
-            disabled={currentStock === 0}
+            disabled={currentStock === 0 || availabilityLoading}
             className="w-full bg-[#AF140B] text-white py-4 rounded-2xl hover:bg-[#8D0F08] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
           >
             <ShoppingCart className="size-6" />
-            {currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
+            {availabilityLoading ? "Đang kiểm tra..." : currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
           </button>
 
           {/* Add to Wishlist Button */}
@@ -454,36 +437,45 @@ export default function ProductDetail() {
           <h3 className="font-bold text-gray-800">Tình Trạng Tại Cửa Hàng</h3>
         </div>
 
-        {storesWithStock.length > 0 ? (
+        {availabilityLoading ? (
+          <div className="flex items-center justify-center py-6 gap-2 text-gray-500">
+            <Loader2 className="size-5 animate-spin" />
+            <span>Đang tải tình trạng cửa hàng...</span>
+          </div>
+        ) : storesWithStock.length > 0 ? (
           <div className="space-y-3">
             {storesWithStock.slice(0, 3).map((store) => (
-              <div key={store.id} className="p-3 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20">
+              <div key={store.storeId} className="p-3 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 line-clamp-1">
-                      {store.name}
+                      {store.storeName}
                     </p>
                     <p className="text-sm text-gray-600 line-clamp-1">{store.address}</p>
                   </div>
                   <span className="text-[#AF140B] font-bold text-sm whitespace-nowrap">
-                    Còn {getStoreSkuQuantity(store.id)} sp
+                    Còn {store.quantity} sp
                   </span>
                 </div>
               </div>
             ))}
 
-            <Link
-              to="/stores"
-              className="flex items-center justify-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm py-2"
-            >
-              Xem tất cả {storesWithStock.length} cửa hàng
-              <ChevronRight className="size-4" />
-            </Link>
+            {storesWithStock.length > 3 && (
+              <button
+                onClick={() => setShowStoreModal(true)}
+                className="flex items-center justify-center gap-2 text-[#AF140B] hover:text-[#8D0F08] font-semibold text-sm py-2 w-full"
+              >
+                Xem tất cả {storesWithStock.length} cửa hàng
+                <ChevronRight className="size-4" />
+              </button>
+            )}
           </div>
         ) : (
           <div>
             <p className="text-gray-600 text-sm mb-4">
-              Kiểm tra sản phẩm này có sẵn tại cửa hàng Kinderland gần bạn không.
+              {selectedSku
+                ? "Sản phẩm hiện tại đã hết hàng ở tất cả các chi nhánh."
+                : "Vui lòng chọn loại sản phẩm để kiểm tra tình trạng tại cửa hàng."}
             </p>
             <button
               onClick={() => setShowStoreModal(true)}
