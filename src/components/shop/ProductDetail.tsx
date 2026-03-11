@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { ShoppingCart, Heart, MapPin, ChevronRight, ArrowLeft, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Heart, MapPin, ChevronRight, ArrowLeft, Plus, Minus, Star, Loader2, MessageSquare, Edit2 } from 'lucide-react';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
 import { toast } from 'sonner';
 import api from "../../services/api";
+import { reviewApi, Review } from '../../services/reviewApi';
+import { inventoryApi, StoreAvailability } from '../../services/inventoryApi';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -73,26 +75,6 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
-
-    // Fetch stores & inventory
-    const fetchStoresAndInventory = async () => {
-      try {
-        const storesRes = await api.get("/api/v1/stores");
-        setStores(storesRes.data || []);
-
-        // Temporarily fake inventory since backend returns 401
-        const mockInventories = storesRes.data?.map((store: any) => ({
-          storeId: store.id,
-          skuId: 1,
-          quantity: Math.floor(Math.random() * 50) + 1
-        })) || [];
-
-        setInventories(mockInventories);
-      } catch (error) {
-        console.error("Lỗi lấy stores:", error);
-      }
-    };
-    fetchStoresAndInventory();
   }, [id]);
 
   useEffect(() => {
