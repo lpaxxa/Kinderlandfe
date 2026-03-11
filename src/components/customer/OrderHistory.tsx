@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Loader2,
   ChevronRight,
+  Star,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { toast } from 'sonner';
@@ -300,6 +301,19 @@ export default function OrderHistory() {
                 <RotateCcw className="w-4 h-4 mr-2 group-hover/btn:rotate-[-45deg] transition-transform" />
                 Mua lại
               </Button>
+            )}
+
+            {order.status === 'DELIVERED' && order.items && order.items.length > 0 && (
+              <Link to={`/product/${order.items[0].id}#reviews`}>
+                <Button
+                  variant="outline"
+                  className="flex-1 sm:flex-none border-yellow-300 text-yellow-600 hover:bg-yellow-50 transition-all rounded-xl font-bold h-11"
+                  size="sm"
+                >
+                  <Star className="w-4 h-4 mr-2 fill-yellow-400" />
+                  Đánh giá
+                </Button>
+              </Link>
             )}
           </div>
         </CardContent>

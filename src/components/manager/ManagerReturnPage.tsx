@@ -119,6 +119,7 @@ export default function ManagerReturnPage() {
     // Refund dialog
     const [refundDialog, setRefundDialog] = useState<ReturnResponseDTO | null>(null);
     const [bankTransactionCode, setBankTransactionCode] = useState('');
+    const [refundType, setRefundType] = useState<'BANK_TRANSFER' | 'E_GIFT'>('BANK_TRANSFER');
 
     // ─── Fetch ───────────────────────────────────────────
     const fetchReturns = async (pageNum = page) => {
@@ -157,6 +158,18 @@ export default function ManagerReturnPage() {
 
     // ─── Actions ─────────────────────────────────────────
 
+    // Helper: parse error message from API response
+    const parseApiError = async (err: unknown): Promise<string> => {
+        if (err instanceof Response) {
+            try {
+                const body = await err.json();
+                return body?.message || body?.error || `Lỗi ${err.status}`;
+            } catch { return `Lỗi ${err.status}`; }
+        }
+        if (err instanceof Error) return err.message;
+        return 'Đã xảy ra lỗi không xác định.';
+    };
+
     // APPROVE — no body
     const handleApprove = async (id: number) => {
         setActionLoading(true);
@@ -168,7 +181,7 @@ export default function ManagerReturnPage() {
             setActionSuccess('Đã duyệt yêu cầu hoàn trả!');
             setTimeout(() => setActionSuccess(null), 3000);
         } catch (err: unknown) {
-            setActionError(err instanceof Error ? err.message : 'Duyệt thất bại.');
+            setActionError(await parseApiError(err));
         } finally {
             setActionLoading(false);
         }
@@ -190,7 +203,7 @@ export default function ManagerReturnPage() {
             setActionSuccess('Đã từ chối yêu cầu hoàn trả.');
             setTimeout(() => setActionSuccess(null), 3000);
         } catch (err: unknown) {
-            setActionError(err instanceof Error ? err.message : 'Từ chối thất bại.');
+            setActionError(await parseApiError(err));
         } finally {
             setActionLoading(false);
         }
@@ -207,31 +220,33 @@ export default function ManagerReturnPage() {
             setActionSuccess('Đã xác nhận nhận hàng!');
             setTimeout(() => setActionSuccess(null), 3000);
         } catch (err: unknown) {
-            setActionError(err instanceof Error ? err.message : 'Xác nhận thất bại.');
+            setActionError(await parseApiError(err));
         } finally {
             setActionLoading(false);
         }
     };
 
-    // REFUND — { bankTransactionCode }
+    // REFUND — { refundType, bankTransactionCode? }
     const handleRefund = async () => {
-        if (!refundDialog || !bankTransactionCode.trim()) return;
+        if (!refundDialog) return;
+        if (refundType === 'BANK_TRANSFER' && !bankTransactionCode.trim()) return;
         setActionLoading(true);
         setActionError(null);
         try {
-            await api.patch(`/api/v1/return-requests/${refundDialog.returnId}/refund`, {
-                bankTransactionCode: bankTransactionCode.trim(),
-            });
+            const body: Record<string, string> = { refundType };
+            if (refundType === 'BANK_TRANSFER') body.bankTransactionCode = bankTransactionCode.trim();
+            await api.patch(`/api/v1/return-requests/${refundDialog.returnId}/refund`, body);
             setReturns(prev => prev.map(r => r.returnId === refundDialog.returnId
-                ? { ...r, returnStatus: 'REFUNDED' as ReturnStatus } : r));
+                ? { ...r, returnStatus: 'REFUNDED' as ReturnStatus, refundType } : r));
             if (selected?.returnId === refundDialog.returnId)
-                setSelected(prev => prev ? { ...prev, returnStatus: 'REFUNDED' as ReturnStatus } : null);
+                setSelected(prev => prev ? { ...prev, returnStatus: 'REFUNDED' as ReturnStatus, refundType } : null);
             setRefundDialog(null);
             setBankTransactionCode('');
+            setRefundType('BANK_TRANSFER');
             setActionSuccess('Đã hoàn tiền thành công!');
             setTimeout(() => setActionSuccess(null), 3000);
         } catch (err: unknown) {
-            setActionError(err instanceof Error ? err.message : 'Hoàn tiền thất bại.');
+            setActionError(await parseApiError(err));
         } finally {
             setActionLoading(false);
         }
@@ -264,7 +279,7 @@ export default function ManagerReturnPage() {
             case 'RECEIVED':
                 return (
                     <Button size={size} className={`bg-emerald-600 hover:bg-emerald-700 text-white ${cls}`}
-                        onClick={() => { setRefundDialog(ret); setBankTransactionCode(''); }} disabled={actionLoading}>
+                        onClick={() => { setRefundDialog(ret); setBankTransactionCode(''); setRefundType('BANK_TRANSFER'); }} disabled={actionLoading}>
                         <DollarSign className="w-3 h-3 mr-1" />Hoàn tiền
                     </Button>
                 );
@@ -619,8 +634,37 @@ export default function ManagerReturnPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
-                        {/* Show bank info if available */}
-                        {refundDialog?.bankName && (
+                        {/* Refund type selector */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">Hình thức hoàn tiền *</label>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRefundType('BANK_TRANSFER')}
+                                    className={`flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition-all ${
+                                        refundType === 'BANK_TRANSFER'
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                                    }`}
+                                >
+                                    🏦 Chuyển khoản
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setRefundType('E_GIFT')}
+                                    className={`flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition-all ${
+                                        refundType === 'E_GIFT'
+                                            ? 'bg-orange-500 text-white border-orange-500'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                                    }`}
+                                >
+                                    🎁 E-Gift Card
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Show bank info if available and BANK_TRANSFER selected */}
+                        {refundType === 'BANK_TRANSFER' && refundDialog?.bankName && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-1">
                                 <p className="font-semibold text-blue-700 mb-1">Thông tin ngân hàng KH:</p>
                                 <p><span className="text-gray-600">Ngân hàng:</span> {refundDialog.bankName}</p>
@@ -628,23 +672,38 @@ export default function ManagerReturnPage() {
                                 {refundDialog.bankAccountName && <p><span className="text-gray-600">Chủ TK:</span> {refundDialog.bankAccountName}</p>}
                             </div>
                         )}
+
+                        {/* E-Gift notice */}
+                        {refundType === 'E_GIFT' && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
+                                <p className="font-semibold text-orange-700 mb-1">🎁 Hoàn tiền bằng E-Gift Card</p>
+                                <p className="text-gray-600">Hệ thống sẽ tự động tạo và gửi E-Gift Card cho khách hàng qua email.</p>
+                            </div>
+                        )}
+
                         {refundDialog?.refundAmount != null && (
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
                                 <span className="text-gray-600">Số tiền hoàn: </span>
                                 <strong className="text-green-700">{formatMoney(refundDialog.refundAmount)}</strong>
                             </div>
                         )}
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">Mã giao dịch ngân hàng *</label>
-                            <Input value={bankTransactionCode} onChange={e => setBankTransactionCode(e.target.value)}
-                                placeholder="Nhập mã giao dịch chuyển khoản..." />
-                            <p className="text-xs text-gray-400 mt-1">Mã xác nhận chuyển khoản hoàn tiền cho khách hàng</p>
-                        </div>
+
+                        {refundType === 'BANK_TRANSFER' && (
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Mã giao dịch ngân hàng *</label>
+                                <Input value={bankTransactionCode} onChange={e => setBankTransactionCode(e.target.value)}
+                                    placeholder="Nhập mã giao dịch chuyển khoản..." />
+                                <p className="text-xs text-gray-400 mt-1">Mã xác nhận chuyển khoản hoàn tiền cho khách hàng</p>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setRefundDialog(null)} disabled={actionLoading}>Hủy</Button>
-                        <Button onClick={handleRefund} disabled={actionLoading || !bankTransactionCode.trim()}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Button
+                            onClick={handleRefund}
+                            disabled={actionLoading || (refundType === 'BANK_TRANSFER' && !bankTransactionCode.trim())}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
                             {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
                             Xác nhận hoàn tiền
                         </Button>
