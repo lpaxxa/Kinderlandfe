@@ -1,16 +1,64 @@
 import React from "react";
 import ProductCard from "../shop/ProductCard";
-import { products } from "../../data/products";
 import { Percent, TrendingDown } from "lucide-react";
 import Pagination from "../common/Pagination";
+import api from "../../services/api";
 
 export default function DiscountsPage() {
+
+  const [products, setProducts] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 20;
 
-  // Filter products with discounts
-  const discountedProducts = products.filter((p) => p.discount);
+  React.useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
 
+        const response = await api.get("/api/v1/products");
+        const data = response.data;
+
+        const productsData = Array.isArray(data) ? data : data.data;
+
+        const mappedProducts = productsData.map((item) => {
+          const discount = item.promotion?.discountPercent || 0;
+
+          const originalPrice = item.minPrice;
+          const price =
+            discount > 0
+              ? originalPrice - (originalPrice * discount) / 100
+              : originalPrice;
+
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: price,
+            originalPrice: discount > 0 ? originalPrice : null,
+            discountPercent: discount,
+
+            category: item.categoryName,
+            brand: item.brandName,
+            image: item.imageUrl,
+          };
+        });
+
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error("Lỗi lấy products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Filter products with discounts
+  const discountedProducts = products.filter(
+    (p) => p.discountPercent > 0
+  );
   // Pagination
   const totalPages = Math.ceil(
     discountedProducts.length / itemsPerPage,
@@ -73,7 +121,11 @@ export default function DiscountsPage() {
           {discountedProducts.length} sản phẩm đang giảm giá
         </p>
 
-        {currentProducts.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20">
+            <p>Đang tải sản phẩm...</p>
+          </div>
+        ) : currentProducts.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 text-lg">
               Hiện không có sản phẩm khuyến mãi

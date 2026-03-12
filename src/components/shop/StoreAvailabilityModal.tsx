@@ -1,16 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { X, MapPin, Search, ChevronDown, CheckCircle, AlertCircle, XCircle, Package, Loader2 } from 'lucide-react';
-import { Product } from '../../data/products';
 import { inventoryApi, StoreAvailability } from '../../services/inventoryApi';
 
 interface StoreAvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product: Product;
-  skuId?: number; // skuId từ BE, nếu không có thì dùng product.id
+  product: any;
+  selectedSku?: any;
 }
 
-export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId }: StoreAvailabilityModalProps) {
+export default function StoreAvailabilityModal({ isOpen, onClose, product, selectedSku }: StoreAvailabilityModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [onlyShowInStock, setOnlyShowInStock] = useState(false);
@@ -37,7 +36,7 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
   useEffect(() => {
     if (!isOpen) return;
 
-    const id = skuId ?? Number(product.id);
+    const id = selectedSku?.id ?? Number(product.id);
     if (!id || isNaN(id)) return;
 
     setLoading(true);
@@ -59,15 +58,17 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
         setError(err.message || 'Không thể tải dữ liệu cửa hàng');
       })
       .finally(() => setLoading(false));
-  }, [isOpen, skuId, product.id]);
+  }, [isOpen, selectedSku, product.id]);
 
   const cities = [...new Set(storeList.map((s) => extractCity(s.address)))];
 
   const getStockStatus = (availabilityStatus: string) => {
     switch (availabilityStatus) {
       case 'Còn hàng':
+      case 'Có sẵn':
         return { status: 'available', text: 'Có sẵn', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
       case 'Còn ít':
+      case 'Sắp hết hàng':
         return { status: 'low', text: 'Còn ít', icon: AlertCircle, color: 'text-orange-600', bgColor: 'bg-orange-50' };
       case 'Hết hàng':
         return { status: 'out', text: 'Hết hàng', icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -77,7 +78,7 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
   };
 
   const filteredStores = useMemo(() => {
@@ -129,28 +130,44 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
               {/* Product Info */}
               <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4">
                 <img
-                  src={product.image}
+                  src={product.image || product.imageUrl || "/placeholder.png"}
                   alt={product.name}
-                  className="size-20 object-cover rounded-lg"
+                  className="size-24 object-cover rounded-lg border border-gray-200"
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-gray-800 line-clamp-2">{product.name}</h3>
-                  <p className="text-lg font-bold text-blue-600 mt-1">
-                    {formatPrice(product.price)}
-                  </p>
-                  <p className="text-sm text-gray-600">{product.brand}</p>
+                  <div className="mt-1">
+                    {(() => {
+                      const discountPercent = product.discount || 0;
+                      const currentOriginalPrice = selectedSku ? selectedSku.price : (product.originalPrice || product.price);
+                      const currentFinalPrice = discountPercent > 0
+                        ? currentOriginalPrice - (currentOriginalPrice * discountPercent) / 100
+                        : currentOriginalPrice;
+
+                      return (
+                        <div className="flex items-center gap-2">
+                          <p className="text-xl font-extrabold text-[#AF140B] whitespace-nowrap">
+                            {formatPrice(currentFinalPrice)}
+                          </p>
+                          {discountPercent > 0 && (
+                            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">
+                              -{discountPercent}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  {selectedSku && (
+                    <p className="text-xs text-gray-500 font-medium mt-1">
+                      Loại: <span className="text-gray-700">{selectedSku.skuCode}</span>
+                      {selectedSku.size && ` | Size: ${selectedSku.size}`}
+                      {selectedSku.color && ` | Color: ${selectedSku.color}`}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider font-bold">{product.brand}</p>
                 </div>
               </div>
-
-              {/* Link to full store finder */}
-              <a
-                href="/stores"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline font-semibold uppercase tracking-wide"
-              >
-                Kiểm tra tình trạng còn hàng →
-              </a>
 
               {/* City Selector */}
               <div>
@@ -174,7 +191,7 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Tìm kiếm theo thành phố, địa chỉ hoặc mã bưu điện..."
+                  placeholder="Tìm kiếm theo thành phố, địa chỉ..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -207,6 +224,7 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
                   ⚠️ {error}
                 </div>
               )}
+
               <div className="text-sm text-gray-600">
                 <strong>{storesInStock}</strong> trên tổng <strong>{storeList.length}</strong> cửa hàng có sản phẩm này
               </div>
@@ -308,7 +326,7 @@ export default function StoreAvailabilityModal({ isOpen, onClose, product, skuId
 
                 {!loading && filteredStores.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">Không tìm thấy cửa hàng</p>
+                    <p className="text-gray-500">Không tìm thấy cửa hàng phù hợp</p>
                   </div>
                 )}
               </div>

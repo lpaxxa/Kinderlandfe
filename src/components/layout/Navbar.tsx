@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { ShoppingCart, User, LogOut, Search, Menu, X, Home, Percent, Grid, Package, Sparkles, BookOpen, Award, MapPin, UserCircle } from 'lucide-react';
+import { Heart, ShoppingCart, User, LogOut, Search, Menu, X, Home, Percent, Grid, Package, Sparkles, BookOpen, Award, MapPin, UserCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import CartDropdown from './CartDropdown';
 import { Logo } from '../common/Logo';
@@ -14,7 +14,7 @@ import {
 } from '../ui/dropdown-menu';
 
 export default function Navbar() {
-  const { user, logout, cart } = useApp();
+  const { user, logout, cart, wishlistCount } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -66,13 +66,11 @@ export default function Navbar() {
   return (
     <>
       {/* Header - Logo, Search, Cart, User */}
-      <header className={`bg-[#AF140B] border-b border-white/20 sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
-      }`}>
+      <header className={`bg-[#AF140B] border-b border-white/20 sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
+        }`}>
         <div className="container mx-auto px-4">
-          <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${
-            isScrolled ? 'py-3' : 'py-4'
-          }`}>
+          <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${isScrolled ? 'py-3' : 'py-4'
+            }`}>
             {/* Logo */}
             <Link to="/" className="flex-shrink-0">
               <Logo size="small" className="md:hidden" />
@@ -95,6 +93,19 @@ export default function Navbar() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
+              <div className="relative">
+                <Link
+                  to="/account/wishlist"
+                  className="relative p-3 hover:bg-white/10 rounded-xl transition-all block"
+                >
+                  <Heart className="size-6 text-white" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-white text-[#AF140B] text-xs rounded-full size-6 flex items-center justify-center font-bold shadow-lg">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
               {/* Cart */}
               <div
                 className="relative"
@@ -124,7 +135,7 @@ export default function Navbar() {
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl hover:bg-white/90 transition-all shadow-md">
                         <User className="size-5 text-[#AF140B]" />
-                        <span className="text-sm font-semibold text-[#4A4A4A]">{user.name}</span>
+                        <span className="text-sm font-semibold text-[#4A4A4A]">{user.username || user.name}</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
@@ -209,11 +220,10 @@ export default function Navbar() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex flex-col items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold transition-all min-w-[110px] ${
-                    active
-                      ? 'bg-[#AF140B] text-white shadow-lg transform scale-105'
-                      : 'text-[#4A4A4A] hover:bg-[#FFE5E3] hover:scale-105'
-                  }`}
+                  className={`flex flex-col items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold transition-all min-w-[110px] ${active
+                    ? 'bg-[#AF140B] text-white shadow-lg transform scale-105'
+                    : 'text-[#4A4A4A] hover:bg-[#FFE5E3] hover:scale-105'
+                    }`}
                 >
                   <div className={`p-2.5 rounded-xl ${active ? 'bg-white/30 shadow-lg' : 'bg-[#FFE5E3]'}`}>
                     <Icon className={`size-6 ${active ? 'text-white' : 'text-[#AF140B]'}`} />
@@ -249,11 +259,10 @@ export default function Navbar() {
                       key={item.path}
                       to={item.path}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        active
-                          ? `bg-gradient-to-r ${item.color} text-white`
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${active
+                        ? `bg-gradient-to-r ${item.color} text-white`
+                        : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       <Icon className="size-5" />
                       {item.name}
@@ -265,9 +274,13 @@ export default function Navbar() {
               {/* Mobile User Actions */}
               {user ? (
                 <div className="pt-4 border-t border-gray-200 space-y-2">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20">
-                    <User className="size-5 text-[#AF140B]" />
-                    <span className="text-sm font-semibold text-gray-700">{user.name}</span>
+                  <div className="bg-white shadow-2xl hover:shadow-red-900/10 transition-all duration-300 rounded-xl p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-[#AF140B] flex items-center justify-center text-lg font-bold text-white">
+                        {(user?.username || user?.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">{user.username || user.name}</span>
+                    </div>
                   </div>
                   <Link
                     to="/account"

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { useApp } from "../../context/AppContext";
 import { useAdmin } from "../../context/AdminContext";
 
@@ -31,9 +31,8 @@ export default function LoginPage() {
 
   const { loginAdmin } = useAdmin();
   const navigate = useNavigate();
-  const { login, register } = useApp();
-
-  const { setUser } = useApp();
+  const location = useLocation();
+  const { login, register, setUser } = useApp();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +42,6 @@ export default function LoginPage() {
       console.log("FULL RESPONSE:", response);
       console.log("DATA:", response.data);
       const data = response.data;
-
 
       if (!data?.accessToken) {
         toast.error("Không nhận được token!");
@@ -64,7 +62,6 @@ export default function LoginPage() {
       if (role === "ROLE_ADMIN") {
         loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "admin" });
         navigate("/admin/dashboard");
-
       } else if (role === "ROLE_MANAGER") {
         // Fetch the manager's assigned store
         let storeId: string | undefined;
@@ -83,23 +80,24 @@ export default function LoginPage() {
         }
         loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "manager", storeId, storeName });
         navigate("/manager/dashboard");
-
       } else if (role === "ROLE_STAFF") {
         loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "staff" });
         navigate("/staff/dashboard");
-
       } else {
         // CUSTOMER
         setUser({
-          id: "1",
+          id: data.id || "1",
           email: userEmail,
-          name: userEmail.split("@")[0],
+          username: data.username || userEmail.split("@")[0],
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          name: data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || userEmail.split("@")[0],
           role,
         });
 
-        navigate("/");
+        const from = (location.state as any)?.from?.pathname || "/";
+        navigate(from, { replace: true });
       }
-
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Đăng nhập thất bại!");
@@ -109,10 +107,8 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       toast.info("Đang khởi tạo Google Sign-In...");
-
       const googleAuth = GoogleAuthService.getInstance();
       await googleAuth.initialize();
-
       const credential = await googleAuth.signIn();
 
       if (!credential) {
@@ -121,13 +117,8 @@ export default function LoginPage() {
       }
 
       toast.info("Đang xác thực với server...");
-
       const response = await api.loginWithGoogle(credential);
-
-      console.log("FULL RESPONSE:", response);
-      console.log("DATA:", response.data);
-      const baseResponse = response;
-      const data = baseResponse.data;
+      const data = response.data || response;
 
       if (!data?.accessToken) {
         toast.error("Phản hồi server không hợp lệ");
@@ -135,7 +126,6 @@ export default function LoginPage() {
       }
 
       const { accessToken, refreshToken, email, role } = data;
-
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
@@ -144,7 +134,6 @@ export default function LoginPage() {
       if (role === "ROLE_ADMIN") {
         loginAdmin({ id: email, email, name: email, role: "admin" });
         navigate("/admin/dashboard");
-
       } else if (role === "ROLE_MANAGER") {
         let storeId: string | undefined;
         let storeName: string | undefined;
@@ -161,39 +150,30 @@ export default function LoginPage() {
         }
         loginAdmin({ id: email, email, name: email, role: "manager", storeId, storeName });
         navigate("/manager/dashboard");
-
       } else if (role === "ROLE_STAFF") {
         loginAdmin({ id: email, email, name: email, role: "staff" });
         navigate("/staff/dashboard");
-
       } else {
-        login(email, "");
-        navigate("/");
+        setUser({
+          id: data.id || "1",
+          email: email,
+          username: data.username || email.split("@")[0],
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          name: data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || email.split("@")[0],
+          role,
+        });
+        const from = (location.state as any)?.from?.pathname || "/";
+        navigate(from, { replace: true });
       }
-
-
-
     } catch (error: any) {
       console.error("Google login failed:", error);
-
-      if (error.message?.includes("popup")) {
-        toast.error("Vui lòng cho phép popup để đăng nhập với Google");
-      } else if (
-        error.message?.includes("network") ||
-        error.message?.includes("fetch")
-      ) {
-        toast.error("Không thể kết nối tới server. Vui lòng thử lại sau.");
-      } else if (error.message?.includes("origin")) {
-        toast.error("Lỗi cấu hình Google OAuth. Liên hệ admin.");
-      } else {
-        toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
-      }
+      toast.error("Đăng nhập Google thất bại.");
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       await api.register({
         username,
@@ -208,7 +188,7 @@ export default function LoginPage() {
 
       const loginResponse = await api.loginWithEmail(email, password);
 
-      const data = loginResponse.data;
+      const data = loginResponse.data || loginResponse;
 
       if (!data?.accessToken) {
         toast.error("Không nhận được token sau khi đăng ký");
@@ -216,31 +196,30 @@ export default function LoginPage() {
       }
 
       const { accessToken, refreshToken, role, email: userEmail } = data;
-
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
       setUser({
-        id: "1",
+        id: data.id || "1",
         email: userEmail,
-        name: userEmail.split("@")[0],
+        username: data.username || userEmail.split("@")[0],
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        name: data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || userEmail.split("@")[0],
         role,
       });
 
-      navigate("/");
-
+      const from = (location.state as any)?.from?.pathname || "/";
+      navigate(from, { replace: true });
     } catch (error) {
       console.error("Register error:", error);
       toast.error("Đăng ký thất bại!");
     }
   };
 
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#FFE5E3] via-white to-[#FFE5E3]">
-      {/* Container */}
       <div className="relative w-full max-w-4xl h-[600px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
-        {/* Sliding Overlay Panel */}
         <motion.div
           className="absolute top-0 w-1/2 h-full bg-gradient-to-br from-[#AF140B] to-[#8D0F08] z-10 flex items-center justify-center text-white p-12"
           initial={false}
@@ -254,7 +233,6 @@ export default function LoginPage() {
           }}
         >
           <div className="text-center space-y-6">
-            {/* Icon */}
             <motion.div
               key={isLogin ? "smile" : "welcome"}
               initial={{ scale: 0, rotate: -180 }}
@@ -265,7 +243,6 @@ export default function LoginPage() {
               <Smile className="w-12 h-12" />
             </motion.div>
 
-            {/* Text */}
             <motion.div
               key={isLogin ? "hello" : "welcome-back"}
               initial={{ opacity: 0, y: 20 }}
@@ -273,9 +250,7 @@ export default function LoginPage() {
               transition={{ delay: 0.2 }}
             >
               <h2 className="text-3xl font-bold mb-3">
-                {isLogin
-                  ? "Chào mừng trở lại!"
-                  : "Xin chào, Bạn!"}
+                {isLogin ? "Chào mừng trở lại!" : "Xin chào, Bạn!"}
               </h2>
               <p className="text-white/90 mb-6 leading-relaxed">
                 {isLogin
@@ -290,7 +265,6 @@ export default function LoginPage() {
               </p>
             </motion.div>
 
-            {/* Button */}
             <button
               onClick={() => setIsLogin(!isLogin)}
               className="px-10 py-3 rounded-full border-2 border-white text-white font-semibold hover:bg-white hover:text-[#AF140B] transition-all duration-300"
@@ -300,7 +274,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* Login Form - Left Side */}
         <div
           className={`absolute top-0 left-0 w-1/2 h-full flex items-center justify-center p-12 transition-opacity duration-300 ${isLogin
             ? "opacity-100 pointer-events-auto"
@@ -312,29 +285,16 @@ export default function LoginPage() {
               Đăng Nhập KinderLand
             </h2>
 
-            {/* Google Sign In */}
             <button
               type="button"
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold mb-4"
             >
               <svg className="size-5" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
               Đăng nhập với Google
             </button>
@@ -350,7 +310,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
                 icon={<Mail />}
@@ -359,7 +318,6 @@ export default function LoginPage() {
                 value={email}
                 onChange={setEmail}
               />
-
               <Input
                 icon={<Lock />}
                 type="password"
@@ -367,19 +325,15 @@ export default function LoginPage() {
                 value={password}
                 onChange={setPassword}
               />
-
               <div className="text-right">
                 <button
                   type="button"
                   className="text-sm text-gray-600 hover:text-[#AF140B] transition-colors"
-                  onClick={() =>
-                    toast.info("Tính năng đang được phát triển")
-                  }
+                  onClick={() => toast.info("Tính năng đang được phát triển")}
                 >
                   Quên mật khẩu?
                 </button>
               </div>
-
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl font-bold bg-[#AF140B] text-white shadow-md hover:shadow-lg hover:bg-[#8D0F08] hover:-translate-y-[1px] active:translate-y-0 transition-all"
@@ -387,29 +341,9 @@ export default function LoginPage() {
                 Đăng Nhập
               </button>
             </form>
-
-            {/* Demo Account Info */}
-            <div className="mt-6">
-              <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                <AlertCircle className="size-3" />
-                Tài khoản demo:
-              </p>
-              <div className="bg-[#FFE5E3] p-3 rounded-lg border border-[#AF140B]/20">
-                <p className="text-xs font-medium">
-                  👑 Thành viên Vàng
-                </p>
-                <p className="text-xs font-mono text-[#AF140B]">
-                  customer@kinderland.vn / customer123
-                </p>
-                <p className="text-xs text-gray-600 mt-1">
-                  Nguyễn Thị Lan – 1,500 điểm
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Register Form - Right Side */}
         <div
           className={`absolute top-0 right-0 w-1/2 h-full flex items-center justify-center p-12 transition-opacity duration-300 ${!isLogin
             ? "opacity-100 pointer-events-auto"
@@ -420,36 +354,6 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-gray-800 mb-6">
               Tạo Tài Khoản
             </h2>
-
-            {/* Social Login Buttons */}
-            <div className="flex gap-3 justify-center mb-6">
-              <button
-                type="button"
-                onClick={() =>
-                  toast.info("Tính năng đang được phát triển")
-                }
-                className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-all"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-              </button>
-            </div>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
@@ -462,7 +366,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Register Form */}
             <form onSubmit={handleRegister} className="space-y-3">
               <Input
                 icon={<User />}
@@ -470,43 +373,13 @@ export default function LoginPage() {
                 value={username}
                 onChange={setUsername}
               />
-
               <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Họ"
-                  value={lastName}
-                  onChange={setLastName}
-                />
-                <Input
-                  placeholder="Tên"
-                  value={firstName}
-                  onChange={setFirstName}
-                />
+                <Input placeholder="Họ" value={lastName} onChange={setLastName} />
+                <Input placeholder="Tên" value={firstName} onChange={setFirstName} />
               </div>
-
-              <Input
-                icon={<Mail />}
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={setEmail}
-              />
-
-              <Input
-                icon={<Phone />}
-                placeholder="Số điện thoại"
-                value={phone}
-                onChange={setPhone}
-              />
-
-              <Input
-                icon={<Lock />}
-                type="password"
-                placeholder="Mật khẩu"
-                value={password}
-                onChange={setPassword}
-              />
-
+              <Input icon={<Mail />} type="email" placeholder="Email" value={email} onChange={setEmail} />
+              <Input icon={<Phone />} placeholder="Số điện thoại" value={phone} onChange={setPhone} />
+              <Input icon={<Lock />} type="password" placeholder="Mật khẩu" value={password} onChange={setPassword} />
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl font-bold bg-[#AF140B] text-white shadow-md hover:shadow-lg hover:bg-[#8D0F08] hover:-translate-y-[1px] active:translate-y-0 transition-all"
@@ -540,7 +413,6 @@ function Input({
           {React.cloneElement(icon, { size: 18 })}
         </span>
       )}
-
       <input
         type={type}
         placeholder={placeholder}

@@ -1,6 +1,6 @@
 import { api } from './api';
 
-// ---- Types ----
+// ── Types ─────────────────────────────────────────────────
 
 export interface Review {
     id: number;
@@ -20,104 +20,75 @@ export interface ReviewUpdatePayload {
     comment: string;
 }
 
-export interface ReviewSingleResponse {
-    timestamp: string;
-    statusCode: number;
-    apiPath: string;
-    message: string;
-    data: ReviewItem;
-    success: boolean;
+export interface AddReviewPayload {
+    rating: number;
+    comment: string;
 }
 
-// --- API ---
+// ── API ────────────────────────────────────────────────────
 
 export const reviewApi = {
     /**
-     * Lấy tất cả đánh giá (Manager)
-     * GET /api/v1/reviews
-     */
-    getAllReviews: async (): Promise<ReviewItem[]> => {
-        const response = await fetch(
-            `${API_BASE_URL}/api/v1/reviews`,
-            {
-                method: "GET",
-                headers: getAuthHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: ReviewListResponse = await response.json();
-        return json.data;
-    },
-
-    /**
-     * Lấy danh sách đánh giá theo productId
      * GET /api/reviews/product/{productId}
-     * Returns reviews for a specific product
+     * Lấy danh sách đánh giá theo sản phẩm
      */
     getByProduct: async (productId: number): Promise<Review[]> => {
         const response = await api.get(`/api/reviews/product/${productId}`);
-        // BaseResponse<List<ReviewResponseDTO>>
-        return response.data;
+        // supports { data: [...] } or [...] directly
+        return Array.isArray(response) ? response : (response?.data ?? []);
     },
 
     /**
-     * Trả lời đánh giá (Manager)
-     * POST /api/v1/reviews/{reviewId}/reply?reply={reply}
+     * POST /api/reviews/add/{productId}
+     * Gửi đánh giá mới (yêu cầu đã mua hàng)
      */
-    replyToReview: async (reviewId: number, reply: string): Promise<ReviewItem> => {
-        const params = new URLSearchParams({ reply });
-        const response = await fetch(
-            `${API_BASE_URL}/api/v1/reviews/${reviewId}/reply?${params.toString()}`,
-            {
-                method: "POST",
-                headers: getAuthHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: ReviewSingleResponse = await response.json();
-        return json.data;
-    },
-
-    /**
-     * Xóa đánh giá (Manager)
-     * DELETE /api/v1/reviews/{reviewId}
-     */
-    deleteReview: async (reviewId: number): Promise<void> => {
-        const response = await fetch(
-            `${API_BASE_URL}/api/v1/reviews/${reviewId}`,
-            {
-                method: "DELETE",
-                headers: getAuthHeaders(),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
+    addReview: async (productId: number, payload: AddReviewPayload): Promise<Review> => {
+        const params = new URLSearchParams({
+            rating: payload.rating.toString(),
+            comment: payload.comment,
+        });
+        const response = await api.post(`/api/reviews/add/${productId}?${params.toString()}`, null);
+        return response?.data ?? response;
     },
 
     /**
      * PUT /api/reviews/edit/{reviewId}
-     * Edit a review's rating and comment
+     * Chỉnh sửa đánh giá đã gửi
      */
     edit: async (reviewId: number, payload: ReviewUpdatePayload): Promise<Review> => {
-        // Backend uses @RequestParam for rating and comment
         const params = new URLSearchParams({
             rating: payload.rating.toString(),
-            comment: payload.comment
+            comment: payload.comment,
         });
         const response = await api.put(`/api/reviews/edit/${reviewId}?${params.toString()}`, null);
-        return response.data;
-    }
+        return response?.data ?? response;
+    },
+
+    // ── Manager-only APIs (kept for ReviewManagement) ──────
+
+    /**
+     * GET /api/v1/reviews  (manager)
+     */
+    getAllReviews: async (): Promise<Review[]> => {
+        const response = await api.get('/api/v1/reviews');
+        return response?.data ?? [];
+    },
+
+    /**
+     * POST /api/v1/reviews/{reviewId}/reply  (manager)
+     */
+    replyToReview: async (reviewId: number, reply: string): Promise<Review> => {
+        const response = await api.post(
+            `/api/v1/reviews/${reviewId}/reply?reply=${encodeURIComponent(reply)}`,
+            null
+        );
+        return response?.data ?? response;
+    },
+
+    /**
+     * DELETE /api/v1/reviews/{reviewId}  (manager)
+     */
+    deleteReview: async (reviewId: number): Promise<void> => {
+        await api.delete(`/api/v1/reviews/${reviewId}`);
+    },
 };
