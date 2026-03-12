@@ -36,11 +36,39 @@ export interface ProductSearchParams {
 
 // Helper to normalize API response into Product[]
 const normalizeProducts = (res: any): Product[] => {
-    if (Array.isArray(res)) return res;
-    if (res?.data && Array.isArray(res.data)) return res.data;
     if (res?.data?.content && Array.isArray(res.data.content)) return res.data.content;
     if (res?.content && Array.isArray(res.content)) return res.content;
+    if (Array.isArray(res)) return res;
+    if (res?.data && Array.isArray(res.data)) return res.data;
     return [];
+};
+
+export interface PageResult<T> {
+    content: T[];
+    totalPages: number;
+    totalElements: number;
+    number: number;
+    size: number;
+}
+
+const normalizePage = <T>(res: any): PageResult<T> => {
+    const data = res?.data || res;
+    if (data?.content !== undefined) {
+        return {
+            content: data.content,
+            totalPages: data.totalPages || 0,
+            totalElements: data.totalElements || 0,
+            number: data.number || 0,
+            size: data.size || 0,
+        };
+    }
+    return {
+        content: normalizeProducts(res) as unknown as T[],
+        totalPages: 1,
+        totalElements: normalizeProducts(res).length,
+        number: 0,
+        size: normalizeProducts(res).length,
+    };
 };
 
 // ---- API ----
@@ -48,18 +76,18 @@ const normalizeProducts = (res: any): Product[] => {
 export const productApi = {
     /**
      * GET /api/v1/products
-     * Returns all products
+     * Returns all products (paginated)
      */
-    getAll: async (): Promise<Product[]> => {
-        const res = await api.get('/api/v1/products');
-        return normalizeProducts(res);
+    getAll: async (page = 0, size = 10): Promise<PageResult<Product>> => {
+        const res = await api.get(`/api/v1/products?page=${page}&size=${size}`);
+        return normalizePage(res);
     },
 
     /**
      * GET /api/v1/products/browse
      * Browse products (public, paginated)
      */
-    browse: async (params?: ProductSearchParams): Promise<Product[]> => {
+    browse: async (params?: ProductSearchParams): Promise<PageResult<Product>> => {
         const queryParts: string[] = [];
         if (params?.keyword) queryParts.push(`keyword=${encodeURIComponent(params.keyword)}`);
         if (params?.categoryId) queryParts.push(`categoryId=${params.categoryId}`);
@@ -70,16 +98,16 @@ export const productApi = {
         if (params?.size !== undefined) queryParts.push(`size=${params.size}`);
         const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
         const res = await api.get(`/api/v1/products/browse${query}`);
-        return normalizeProducts(res);
+        return normalizePage(res);
     },
 
     /**
      * GET /api/v1/products/search
      * Search products by keyword
      */
-    search: async (keyword: string): Promise<Product[]> => {
-        const res = await api.get(`/api/v1/products/search?keyword=${encodeURIComponent(keyword)}`);
-        return normalizeProducts(res);
+    search: async (keyword: string, page = 0, size = 10): Promise<PageResult<Product>> => {
+        const res = await api.get(`/api/v1/products/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`);
+        return normalizePage(res);
     },
 
     /**

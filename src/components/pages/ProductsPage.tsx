@@ -1,87 +1,123 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import ProductCard from "../shop/ProductCard";
 import { SlidersHorizontal } from "lucide-react";
 import Pagination from "../common/Pagination";
-import api from "../../services/api";
+import { productApi, Product as APIProduct } from "../../services/productApi";
+import { categoryApi, Category } from "../../services/categoryApi";
+import { brandApi, Brand } from "../../services/brandApi";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<APIProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [brands, setBrands] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [searchParams] = useSearchParams();
-  const [sortBy, setSortBy] = useState("default");
+  const [sortBy, setSortBy] = useState("default"); // Keep for client-side sorting or implement BE later
   const [priceRange, setPriceRange] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [selectedCategory, setSelectedCategory] =
-    useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const itemsPerPage = 20;
+
   const searchTerm = searchParams.get("search") || "";
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      product.category
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      product.description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      product.brand
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+  // Load Categories & Brands ONCE
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const [cats, brnds] = await Promise.all([
+          categoryApi.getAll(),
+          brandApi.getAll()
+        ]);
+        setCategories(cats || []);
+        setBrands(brnds || []);
+      } catch (err) {
+        console.error("Error loading categories or brands", err);
+      }
+    };
+    fetchMetadata();
+  }, []);
 
-    const matchesPrice =
-      priceRange === "all" ||
-      (priceRange === "under300" && product.price < 300000) ||
-      (priceRange === "300-600" &&
-        product.price >= 300000 &&
-        product.price < 600000) ||
-      (priceRange === "600-1000" &&
-        product.price >= 600000 &&
-        product.price < 1000000) ||
-      (priceRange === "over1000" && product.price >= 1000000);
+  // Fetch Products based on parameters
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        let minPrice: number | undefined;
+        let maxPrice: number | undefined;
 
-    const matchesBrand =
-      selectedBrand === "all" ||
-      product.brand === selectedBrand;
-    const matchesCategory =
-      selectedCategory === "all" ||
-      product.category === selectedCategory;
+        if (priceRange === "under300") {
+          maxPrice = 300000;
+        } else if (priceRange === "300-600") {
+          minPrice = 300000;
+          maxPrice = 600000;
+        } else if (priceRange === "600-1000") {
+          minPrice = 600000;
+          maxPrice = 1000000;
+        } else if (priceRange === "over1000") {
+          minPrice = 1000000;
+        }
 
-    return (
-      matchesSearch &&
-      matchesPrice &&
-      matchesBrand &&
-      matchesCategory
-    );
-  });
+        const pageParam = currentPage - 1; // Backend is 0-indexed
+        
+        // If there's a search term, call the search API
+        if (searchTerm) {
+          const res = await productApi.search(searchTerm, pageParam, itemsPerPage);
+          setProducts(res.content);
+          setTotalPages(res.totalPages);
+          setTotalElements(res.totalElements);
+          return;
+        }
 
-  
+        // Otherwise call the browse API with filters
+        const categoryId = selectedCategory !== "all" ? categories.find(c => c.name === selectedCategory)?.id : undefined;
+        const brandId = selectedBrand !== "all" ? brands.find(b => b.name === selectedBrand)?.id : undefined;
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === "price-asc") return a.price - b.price;
-    if (sortBy === "price-desc") return b.price - a.price;
+        const res = await productApi.browse({
+          categoryId,
+          brandId,
+          minPrice,
+          maxPrice,
+          page: pageParam,
+          size: itemsPerPage,
+        });
+
+        setProducts(res.content);
+        setTotalPages(res.totalPages);
+        setTotalElements(res.totalElements);
+
+      } catch (error) {
+        console.error("Lỗi lấy products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [
+    searchTerm,
+    priceRange,
+    selectedBrand,
+    selectedCategory,
+    currentPage,
+    categories,
+    brands
+  ]);
+
+  // Client-side sorting (since backend sorting is not fully implemented yet)
+  const currentProducts = [...products].sort((a, b) => {
+    const priceA = a.minPrice || 0;
+    const priceB = b.minPrice || 0;
+    if (sortBy === "price-asc") return priceA - priceB;
+    if (sortBy === "price-desc") return priceB - priceA;
     if (sortBy === "name") return a.name.localeCompare(b.name);
     return 0;
   });
-
-  // Pagination
-  const totalPages = Math.ceil(
-    sortedProducts.length / itemsPerPage,
-  );
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = sortedProducts.slice(
-    startIndex,
-    endIndex,
-  );
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -98,70 +134,7 @@ export default function ProductsPage() {
     selectedCategory,
   ]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-
-        const response = await api.get("/api/v1/products");
-
-        const data = response.data;
-
-        const productsData = Array.isArray(data)
-          ? data
-          : data.data;
-
-        const mappedProducts = productsData.map((item: any) => {
-          const discount = item.promotion?.discountPercent || 0;
-
-          const originalPrice = item.minPrice;
-          const price =
-            discount > 0
-              ? originalPrice - (originalPrice * discount) / 100
-              : originalPrice;
-
-          return {
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            price: price,
-            originalPrice: discount > 0 ? originalPrice : null,
-            category: item.categoryName,
-            brand: item.brandName,
-
-            image: item.imageUrl,
-
-            rating: 4.5,
-            reviewCount: 10,
-
-            isBestSeller: false,
-            isNew: false,
-          };
-        });
-
-        setProducts(mappedProducts);
-
-        const uniqueBrands = [
-          ...new Set(mappedProducts.map((p) => p.brand)),
-        ];
-
-        setBrands(uniqueBrands);
-        
-        const uniqueCategories = [
-          ...new Set(mappedProducts.map((p) => p.category)),
-        ];
-
-        setCategories(uniqueCategories);
-
-      } catch (error) {
-        console.error("Lỗi lấy products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  // Removed the huge fetchProducts effect that did client-side mapping
 
 
   return (
@@ -169,7 +142,7 @@ export default function ProductsPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-5xl font-bold mb-3 text-[#AF140B]">
+          <h1 className="text-5xl font-bold mb-3 text-[#AF140B] flex items-center gap-4">
             {searchTerm
               ? `Kết quả tìm kiếm: \"${searchTerm}\"`
               : "Tất Cả Sản Phẩm"}
@@ -177,10 +150,10 @@ export default function ProductsPage() {
           <p className="text-gray-700 text-lg font-semibold">
             Tìm thấy{" "}
             <span className="font-bold text-[#78A2D2]">
-              {sortedProducts.length}
+              {totalElements}
             </span>{" "}
             sản phẩm
-            {totalPages > 1 &&
+            {totalPages > 0 &&
               ` - Trang ${currentPage}/${totalPages}`}
           </p>
         </div>
@@ -248,8 +221,8 @@ export default function ProductsPage() {
               >
                 <option value="all">Tất cả thương hiệu</option>
                 {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
+                  <option key={brand.id} value={brand.name}>
+                    {brand.name}
                   </option>
                 ))}
               </select>
@@ -267,8 +240,8 @@ export default function ProductsPage() {
               >
                 <option value="all">Tất cả danh mục</option>
                 {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -290,12 +263,34 @@ export default function ProductsPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-              {currentProducts.map((product) => (
+              {currentProducts.map((product) => {
+                const discount = product.promotion?.discountPercent || 0;
+                const originalPrice = product.minPrice;
+                const price =
+                  discount > 0
+                    ? originalPrice - (originalPrice * discount) / 100
+                    : originalPrice;
+                    
+                const productProps = {
+                  id: product.id,
+                  name: product.name,
+                  description: product.description,
+                  price: price,
+                  originalPrice: discount > 0 ? originalPrice : null,
+                  category: product.categoryName,
+                  brand: product.brandName,
+                  image: product.imageUrl,
+                  rating: 4.5,
+                  reviewCount: 10,
+                  isBestSeller: false,
+                  isNew: false,
+                };
+                return (
                 <ProductCard
                   key={product.id}
-                  product={product}
+                  product={productProps}
                 />
-              ))}
+              )})}
             </div>
 
             {/* Pagination */}

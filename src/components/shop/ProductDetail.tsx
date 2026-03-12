@@ -67,6 +67,11 @@ export default function ProductDetail() {
         };
 
         setProduct(mappedProduct);
+        const productVariants = data.variants || [];
+        setSkus(productVariants);
+        if (productVariants.length > 0) {
+          setSelectedSku(productVariants[0]);
+        }
       } catch (error) {
         console.error("Lỗi lấy product:", error);
       } finally {
@@ -76,30 +81,6 @@ export default function ProductDetail() {
 
     fetchProduct();
   }, [id]);
-
-  useEffect(() => {
-    if (!product) return;
-
-    const fetchSkus = async () => {
-      try {
-        const res = await api.get("/api/v1/sku");
-
-        const productSkus = res.data.filter(
-          (sku: any) => sku.productId === product.id
-        );
-
-        setSkus(productSkus);
-
-        if (productSkus.length > 0) {
-          setSelectedSku(productSkus[0]);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchSkus();
-  }, [product]);
 
   // Detect if current user already reviewed this product
   useEffect(() => {
@@ -377,8 +358,8 @@ export default function ProductDetail() {
                           onClick={() => matchingSku && setSelectedSku(matchingSku)}
                           title={color}
                           className={`flex items-center gap-2 px-3 py-1.5 border-2 rounded-full text-sm font-medium transition-all ${isSelected
-                              ? 'border-[#AF140B] bg-[#FFE5E3] text-[#AF140B]'
-                              : 'border-gray-200 bg-white hover:border-gray-400 text-gray-700'
+                            ? 'border-[#AF140B] bg-[#FFE5E3] text-[#AF140B]'
+                            : 'border-gray-200 bg-white hover:border-gray-400 text-gray-700'
                             }`}
                         >
                           <span
@@ -418,8 +399,8 @@ export default function ProductDetail() {
                           key={size}
                           onClick={() => matchingSku && setSelectedSku(matchingSku)}
                           className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold transition-all ${isSelected
-                              ? 'bg-[#AF140B] text-white border-[#AF140B] shadow-md'
-                              : 'bg-white border-gray-200 hover:border-[#AF140B]/40 text-gray-700'
+                            ? 'bg-[#AF140B] text-white border-[#AF140B] shadow-md'
+                            : 'bg-white border-gray-200 hover:border-[#AF140B]/40 text-gray-700'
                             }`}
                         >
                           {size}
@@ -441,8 +422,8 @@ export default function ProductDetail() {
                       key={sku.id}
                       onClick={() => setSelectedSku(sku)}
                       className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold transition-all ${selectedSku?.id === sku.id
-                          ? 'bg-[#AF140B] text-white border-[#AF140B]'
-                          : 'bg-white border-gray-200 hover:border-gray-400'
+                        ? 'bg-[#AF140B] text-white border-[#AF140B]'
+                        : 'bg-white border-gray-200 hover:border-gray-400'
                         }`}
                     >
                       Loại {sku.id}
