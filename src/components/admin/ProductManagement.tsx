@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -59,11 +59,11 @@ export default function ProductManagement() {
     setLoading(true);
     try {
       const [prods, cats, brnds] = await Promise.all([
-        productApi.getAll(),
+        productApi.getAll(0, 1000), // Admin panel gets a large first page or needs full pagination logic eventually
         categoryApi.getAll(),
         brandApi.getAll(),
       ]);
-      setProductList(prods || []);
+      setProductList(prods?.content || []);
       setCategories(cats || []);
       setBrands(brnds || []);
     } catch (error: any) {
@@ -90,8 +90,8 @@ export default function ProductManagement() {
     searchTimer.current = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const results = await productApi.search(value);
-        setProductList(results);
+        const results = await productApi.search(value, 0, 1000);
+        setProductList(results.content);
       } catch {
         // fallback to client-side filter already showing
       } finally {
@@ -212,7 +212,7 @@ export default function ProductManagement() {
         {/* Category */}
         <div>
           <Label>Danh mục *</Label>
-          <Select value={formData.categoryId} onValueChange={(v) => setFormData({ ...formData, categoryId: v })}>
+          <Select value={formData.categoryId} onValueChange={(v: string) => setFormData({ ...formData, categoryId: v })}>
             <SelectTrigger><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
@@ -225,7 +225,7 @@ export default function ProductManagement() {
         {/* Brand */}
         <div>
           <Label>Thương hiệu *</Label>
-          <Select value={formData.brandId} onValueChange={(v) => setFormData({ ...formData, brandId: v })}>
+          <Select value={formData.brandId} onValueChange={(v: string) => setFormData({ ...formData, brandId: v })}>
             <SelectTrigger><SelectValue placeholder="Chọn thương hiệu" /></SelectTrigger>
             <SelectContent>
               {brands.map((b) => (
@@ -282,7 +282,7 @@ export default function ProductManagement() {
               </Button>
 
               {/* Add Dialog */}
-              <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) setFormData({ ...emptyForm }); }}>
+              <Dialog open={isAddDialogOpen} onOpenChange={(open: boolean) => { setIsAddDialogOpen(open); if (!open) setFormData({ ...emptyForm }); }}>
                 <DialogTrigger asChild>
                   <Button className="bg-indigo-600 hover:bg-indigo-700">
                     <Plus className="w-4 h-4 mr-2" />
@@ -482,7 +482,7 @@ export default function ProductManagement() {
       </div>
 
       {/* Edit Dialog — PUT /api/v1/products/{id} */}
-      <Dialog open={!!editingProduct} onOpenChange={(open) => { if (!open) { setEditingProduct(null); setFormData({ ...emptyForm }); } }}>
+      <Dialog open={!!editingProduct} onOpenChange={(open: boolean) => { if (!open) { setEditingProduct(null); setFormData({ ...emptyForm }); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa sản phẩm</DialogTitle>
