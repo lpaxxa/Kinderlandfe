@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import OrderDetailModal from './OrderDetailModal';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -50,6 +51,9 @@ export default function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -134,12 +138,17 @@ export default function OrderHistory() {
     if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
 
     try {
-      await api.updateOrderStatus(orderId, 'CANCELLED');
+      await api.cancelOrder(orderId);
       toast.success('Hủy đơn hàng thành công');
       fetchOrders();
     } catch (err: any) {
       toast.error('Không thể hủy đơn hàng: ' + (err.message || 'Lỗi không xác định'));
     }
+  };
+
+  const handleOpenDetail = (orderId: number) => {
+    setSelectedOrderId(orderId);
+    setIsDetailModalOpen(true);
   };
 
   const handleReturnOrder = async (orderId: number) => {
@@ -257,12 +266,12 @@ export default function OrderHistory() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 mt-6">
             <Button 
               variant="outline" 
               className="flex-1 sm:flex-none border-gray-200 hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all rounded-xl font-bold h-11" 
               size="sm"
+              onClick={() => handleOpenDetail(order.id)}
             >
               <Eye className="w-4 h-4 mr-2" />
               Chi tiết
@@ -422,6 +431,13 @@ export default function OrderHistory() {
           </div>
         </Tabs>
       </div>
+
+      <OrderDetailModal 
+        orderId={selectedOrderId} 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        onOrderCancelled={fetchOrders}
+      />
     </div>
   );
 }

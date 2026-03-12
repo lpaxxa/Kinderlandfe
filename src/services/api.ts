@@ -627,6 +627,30 @@ export const api = {
   },
 
   /**
+   * Get order details by ID
+   */
+  getOrderById: async (orderId: number | string) => {
+    try {
+      return await api.get(`/api/v1/orders/${orderId}`);
+    } catch (error) {
+      console.error("Get order by ID API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancel an order
+   */
+  cancelOrder: async (orderId: number | string) => {
+    try {
+      return await api.put(`/api/v1/orders/${orderId}/cancel`, {});
+    } catch (error) {
+      console.error("Cancel order API error:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Update order status (e.g., cancel, return)
    */
   updateOrderStatus: async (orderId: number | string, status: string) => {
