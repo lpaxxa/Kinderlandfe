@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider, useAdmin } from './context/AdminContext';
 import Navbar from './components/layout/Navbar';
@@ -19,6 +19,8 @@ import Cart from './components/cart/Cart';
 import Checkout from './components/checkout/Checkout';
 import Payment from './components/checkout/Payment';
 import OrderSuccess from './components/checkout/OrderSuccess';
+import PaymentResult from './components/checkout/PaymentResult';
+
 
 // Admin & Staff
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -42,7 +44,6 @@ import DefectiveReport from './components/staff/DefectiveReport';
 import ManagerDashboard from './components/manager/ManagerDashboard';
 import ManagerLayout from './components/manager/ManagerLayout';
 import FinancialOverview from './components/manager/FinancialOverview';
-
 import ReviewManagement from './components/manager/ReviewManagement';
 import ImportOrderPage from './components/manager/ImportOrderPage';
 import InventoryManagementPage from './components/manager/InventoryManagementPage';
@@ -57,10 +58,17 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 import OrderHistory from './components/customer/OrderHistory';
 import CustomerProfile from './components/customer/CustomerProfile';
 import LoyaltyPoints from './components/customer/LoyaltyPoints';
+import Wishlist from './components/pages/Wishlist';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function AdminProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'staff' | 'manager')[] }) {
@@ -141,6 +149,11 @@ function AppContent() {
             <Route path="orders" element={<ManagerOrderPage />} />
             <Route path="reviews" element={<ReviewManagement />} />
             <Route path="financial" element={<FinancialOverview />} />
+            <Route path="promotions" element={<PromotionManagement />} />
+            <Route path="blog" element={<ProductManagement />} />
+            <Route path="policies" element={<ProductManagement />} />
+            <Route path="reports" element={<AdminDashboard />} />
+            <Route path="change-password" element={<CustomerProfile />} />
           </Route>
 
           {/* Staff Routes */}
@@ -253,6 +266,10 @@ function AppContent() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/payment-result"
+                    element={<PaymentResult />}
+                  />
                   {/* Customer Account Routes */}
                   <Route
                     path="/account"
@@ -283,6 +300,14 @@ function AppContent() {
                     element={
                       <ProtectedRoute>
                         <LoyaltyPoints />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account/wishlist"
+                    element={
+                      <ProtectedRoute>
+                        <Wishlist />
                       </ProtectedRoute>
                     }
                   />

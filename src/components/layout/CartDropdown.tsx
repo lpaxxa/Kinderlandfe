@@ -1,7 +1,7 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { Trash2, ShoppingCart, Minus, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function CartDropdown() {
   const { cart, removeFromCart, updateCartItem, user } = useApp();
@@ -14,14 +14,16 @@ export default function CartDropdown() {
     }).format(price);
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const subtotal = cart.reduce((sum, item) => {
+    const sku = item.skuResponse || item.sku || {};
+    const product = item.productResponse || sku.productResponse || item.product || {};
+    const price = sku.price || item.price || item.unitPrice || product.minPrice || product.price || item.productPrice || 0;
+    return sum + (price * (item.quantity || 1));
+  }, 0);
 
-  const updateQuantity = (productId: string, currentQuantity: number, newQuantity: number, type?: string) => {
+  const updateQuantity = (cartItemId: number, newQuantity: number) => {
     if (newQuantity > 0 && newQuantity <= 99) {
-      updateCartItem(productId, newQuantity, type);
+      updateCartItem(cartItemId, newQuantity);
     }
   };
 
@@ -55,71 +57,104 @@ export default function CartDropdown() {
         
         {/* Cart Items - Max height with scroll */}
         <div className="max-h-[300px] overflow-y-auto space-y-4 mb-4">
-          {cart.map((item, index) => (
-            <div
-              key={`${item.product.id}-${item.type || 'default'}-${index}`}
-              className="flex gap-3 p-3 hover:bg-[#78A2D2]/10 rounded-lg transition-colors border border-gray-100"
-            >
-              {/* Product Image */}
-              <div className="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-[#78A2D2]/20">
-                <img
-                  src={item.product.image}
-                  alt={item.product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Product Info */}
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-[#2C2C2C] text-sm line-clamp-2 mb-1">
-                  {item.product.name}
-                </h4>
-                {item.type && (
-                  <p className="text-xs text-gray-500 mb-2">Loại: {item.type}</p>
-                )}
-                
-                {/* Quantity Controls */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity, item.quantity - 1, item.type)}
-                    className="w-7 h-7 flex items-center justify-center border-2 border-[#78A2D2]/40 text-[#78A2D2] rounded-full hover:bg-[#78A2D2]/20 transition-colors"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value) || 1;
-                      updateQuantity(item.product.id, item.quantity, val, item.type);
-                    }}
-                    className="w-12 h-7 text-center border-2 border-[#78A2D2]/30 bg-white text-[#2C2C2C] rounded-lg font-semibold text-sm focus:outline-none focus:border-[#78A2D2]"
-                    min="1"
-                    max="99"
+          {cart.map((item, index) => {
+            const sku = item.skuResponse || item.sku || {};
+            const product = item.productResponse || sku.productResponse || item.product || item || {};
+            
+            // CRITICAL: Identify the correct Cart Item ID for API calls
+            const cartItemId = item.id || item.cartItemId || item.idCart || item.cartId;
+            
+            // Alignment: imageUrl from productResponse (preferred), SKU Code from skuResponse
+            const name = product.name || item.productName || item.name || "Sản phẩm";
+            const imageUrl = product.imageUrl || item.imageUrl || item.productImageUrl || product.image || item.image || "/placeholder.png";
+            const price = sku.price || item.price || item.unitPrice || product.minPrice || product.price || 0;
+            const skuCode = sku.skuCode || item.skuCode || "";
+            
+            return (
+              <div
+                key={`cart-dropdown-${cartItemId || index}`}
+                className="flex gap-3 p-3 hover:bg-[#78A2D2]/10 rounded-lg transition-colors border border-gray-100"
+              >
+                {/* Product Image */}
+                <div className="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-[#78A2D2]/20">
+                  <img
+                    src={imageUrl}
+                    alt={name}
+                    className="w-full h-full object-cover"
                   />
+                </div>
+
+                {/* Product Info */}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-[#2C2C2C] text-sm line-clamp-2 mb-1">
+                    {name}
+                  </h4>
+                  <div className="flex flex-col gap-0.5">
+                    {skuCode && (
+                      <span className="text-[10px] font-mono text-gray-400">
+                        {skuCode}
+                      </span>
+                    )}
+                    {sku.color && (
+                      <p className="text-[10px] text-gray-500">Màu: {sku.color}</p>
+                    )}
+                  </div>
+                  
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        if (cartItemId) {
+                          if (item.quantity > 1) updateQuantity(cartItemId, item.quantity - 1);
+                          else toast.error("Số lượng tối thiểu là 1");
+                        }
+                        else toast.error("Không tìm thấy ID giỏ hàng");
+                      }}
+                      className="w-7 h-7 flex items-center justify-center border-2 border-[#78A2D2]/40 text-[#78A2D2] rounded-full hover:bg-[#78A2D2]/20 transition-colors"
+                    >
+                      <Minus className="size-4" />
+                    </button>
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        if (cartItemId) updateQuantity(cartItemId, val);
+                      }}
+                      className="w-12 h-7 text-center border-2 border-[#78A2D2]/30 bg-white text-[#2C2C2C] rounded-lg font-semibold text-sm focus:outline-none focus:border-[#78A2D2]"
+                      min="1"
+                      max="99"
+                    />
+                    <button
+                      onClick={() => {
+                        if (cartItemId) updateQuantity(cartItemId, item.quantity + 1);
+                        else toast.error("Không tìm thấy ID giỏ hàng");
+                      }}
+                      className="w-7 h-7 flex items-center justify-center border-2 border-[#78A2D2]/40 text-[#78A2D2] rounded-full hover:bg-[#78A2D2]/20 transition-colors"
+                    >
+                      <Plus className="size-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Price and Delete */}
+                <div className="flex flex-col items-end justify-between">
                   <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity, item.quantity + 1, item.type)}
-                    className="w-7 h-7 flex items-center justify-center border-2 border-[#78A2D2]/40 text-[#78A2D2] rounded-full hover:bg-[#78A2D2]/20 transition-colors"
+                    onClick={() => {
+                      if (cartItemId) removeFromCart(cartItemId);
+                      else toast.error("Không tìm thấy ID giỏ hàng");
+                    }}
+                    className="text-red-400 hover:text-red-300 p-1 hover:bg-red-50 rounded transition-colors"
                   >
-                    <Plus className="size-4" />
+                    <Trash2 className="size-4" />
                   </button>
+                  <p className="font-bold text-[#78A2D2] text-sm">
+                    {formatPrice(price * (item.quantity || 1))}
+                  </p>
                 </div>
               </div>
-
-              {/* Price and Delete */}
-              <div className="flex flex-col items-end justify-between">
-                <button
-                  onClick={() => removeFromCart(item.product.id)}
-                  className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/20 rounded transition-colors"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-                <p className="font-bold text-[#78A2D2] text-sm">
-                  {formatPrice(item.product.price * item.quantity)}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Divider */}

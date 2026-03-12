@@ -143,6 +143,7 @@ export default function StoreFinderPage() {
           {/* Left Sidebar - Store List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-4">
+
               {/* City Selector */}
               <div className="mb-4">
                 <label className="block text-sm font-bold text-gray-800 mb-2">
@@ -209,6 +210,8 @@ export default function StoreFinderPage() {
                   </div>
                 </div>
               )}
+
+              {/* Search */}
               <div className="mb-6">
                 <div className="relative">
                   {searchLoading ? (
@@ -226,7 +229,7 @@ export default function StoreFinderPage() {
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-4 space-y-2">
                 <p className="text-sm text-gray-700 font-semibold">
                   <strong>{filteredStores.length}</strong> cửa hàng
                   {selectedCity ? ` tại ${selectedCity}` : " trên toàn quốc"}
@@ -303,13 +306,13 @@ export default function StoreFinderPage() {
                     </div>
                   );
                 })}
-              </div>
 
-              {filteredStores.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Không tìm thấy cửa hàng</p>
-                </div>
-              )}
+                {filteredStores.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Không tìm thấy cửa hàng</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

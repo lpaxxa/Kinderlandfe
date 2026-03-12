@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import ProductCard from "../shop/ProductCard";
-import {
-  products,
-  brands,
-  categories,
-} from "../../data/products";
 import { SlidersHorizontal } from "lucide-react";
 import Pagination from "../common/Pagination";
+import api from "../../services/api";
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [brands, setBrands] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("default");
   const [priceRange, setPriceRange] = useState("all");
@@ -61,6 +63,8 @@ export default function ProductsPage() {
     );
   });
 
+  
+
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === "price-asc") return a.price - b.price;
     if (sortBy === "price-desc") return b.price - a.price;
@@ -93,6 +97,72 @@ export default function ProductsPage() {
     selectedBrand,
     selectedCategory,
   ]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+
+        const response = await api.get("/api/v1/products");
+
+        const data = response.data;
+
+        const productsData = Array.isArray(data)
+          ? data
+          : data.data;
+
+        const mappedProducts = productsData.map((item: any) => {
+          const discount = item.promotion?.discountPercent || 0;
+
+          const originalPrice = item.minPrice;
+          const price =
+            discount > 0
+              ? originalPrice - (originalPrice * discount) / 100
+              : originalPrice;
+
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: price,
+            originalPrice: discount > 0 ? originalPrice : null,
+            category: item.categoryName,
+            brand: item.brandName,
+
+            image: item.imageUrl,
+
+            rating: 4.5,
+            reviewCount: 10,
+
+            isBestSeller: false,
+            isNew: false,
+          };
+        });
+
+        setProducts(mappedProducts);
+
+        const uniqueBrands = [
+          ...new Set(mappedProducts.map((p) => p.brand)),
+        ];
+
+        setBrands(uniqueBrands);
+        
+        const uniqueCategories = [
+          ...new Set(mappedProducts.map((p) => p.category)),
+        ];
+
+        setCategories(uniqueCategories);
+
+      } catch (error) {
+        console.error("Lỗi lấy products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -207,7 +277,11 @@ export default function ProductsPage() {
         </div>
 
         {/* Products Grid */}
-        {currentProducts.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20">
+            <p>Đang tải sản phẩm...</p>
+          </div>
+        ) : currentProducts.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 text-lg">
               Không tìm thấy sản phẩm nào

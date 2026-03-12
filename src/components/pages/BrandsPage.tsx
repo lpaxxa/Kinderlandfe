@@ -83,7 +83,31 @@ export default function BrandsPage() {
           ? data
           : data.data;
 
-        setProducts(productsData || []);
+        const mappedProducts = productsData.map((item: any) => {
+          const discount = item.promotion?.discountPercent || 0;
+
+          const originalPrice = item.minPrice;
+
+          const price =
+            discount > 0
+              ? originalPrice - (originalPrice * discount) / 100
+              : originalPrice;
+
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: price,
+            originalPrice: discount > 0 ? originalPrice : null,
+            category: item.categoryName,
+            brand: item.brandName,
+            image: item.imageUrl,
+            rating: 4.5,
+            reviewCount: 10,
+          };
+        });
+
+        setProducts(mappedProducts);
       } catch (error) {
         console.error("Lỗi lấy products:", error);
       } finally {

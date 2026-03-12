@@ -1,5 +1,6 @@
-import React from "react";
-import { Link } from "react-router";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../../services/api";
 import {
   ArrowRight,
   Truck,
@@ -27,50 +28,9 @@ import { TrustedUsers } from "./TrustedUsers";
 export default function HomePage() {
   const [showNewsletterModal, setShowNewsletterModal] =
     React.useState(false);
-  const categories = [
-    {
-      id: 1,
-      name: "Mô hình & Robot",
-      image:
-        "https://images.unsplash.com/photo-1546776230-bb86256870ce?w=400",
-      color: "from-[#AF140B] to-[#8D0F08]",
-    },
-    {
-      id: 2,
-      name: "Đồ chơi xếp hình",
-      image:
-        "https://images.unsplash.com/photo-1672267273720-053bee27b9a2?w=400",
-      color: "from-[#D91810] to-[#AF140B]",
-    },
-    {
-      id: 3,
-      name: "Búp bê & Phụ kiện",
-      image:
-        "https://images.unsplash.com/photo-1612506001235-f0d0892aa11b?w=400",
-      color: "from-[#AF140B] to-[#8D0F08]",
-    },
-    {
-      id: 4,
-      name: "Xe điều khiển",
-      image:
-        "https://images.unsplash.com/photo-1613404196612-e058bb5aa01a?w=400",
-      color: "from-[#D91810] to-[#AF140B]",
-    },
-    {
-      id: 5,
-      name: "Thú nhồi bông",
-      image:
-        "https://images.unsplash.com/photo-1602734846297-9299fc2d4703?w=400",
-      color: "from-[#AF140B] to-[#8D0F08]",
-    },
-    {
-      id: 6,
-      name: "Đồ chơi sáng tạo",
-      image:
-        "https://images.unsplash.com/photo-1727768351795-2390d19b2b41?w=400",
-      color: "from-[#D91810] to-[#AF140B]",
-    },
-  ];
+  // const [brands, setBrands] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const featuredProducts = products.slice(0, 6);
   const newArrivals = products.slice(6, 10);
@@ -91,6 +51,39 @@ export default function HomePage() {
       year: "numeric",
     });
   };
+  useEffect(() => {
+    // fetchBrands();
+    fetchCategories();
+  }, []);
+
+  // const fetchBrands = async () => {
+  //   try {
+  //     const res = await api.get("/api/v1/brands");
+  //     setBrands(res.data);
+  //   } catch (error) {
+  //     console.error("Fetch brands error:", error);
+  //   }
+  // };
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+
+      const res = await api.get("/api/v1/categories");
+
+      console.log("Categories API:", res);
+
+      const data = res.data;
+
+      const categoriesData = Array.isArray(data) ? data : data.data;
+
+      setCategories(categoriesData || []);
+    } catch (error) {
+      console.error("Fetch categories error:", error);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
 
   return (
     <div className="bg-white">
@@ -116,29 +109,27 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/categories/${category.name}`}
-                className="group"
-              >
-                <div className="relative overflow-hidden rounded-2xl aspect-square border-2 border-gray-200 hover:border-[#AF140B] transition-all shadow-md hover:shadow-xl">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-40 group-hover:opacity-50 transition-opacity`}
-                  ></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <h3 className="text-white font-bold text-center px-2 text-sm md:text-base">
+            {categoriesLoading ? (
+              <div className="col-span-6 text-center py-10">
+                Đang tải danh mục...
+              </div>
+            ) : (
+              categories.map((category) => (
+                <Link
+                  key={category.id}
+                  to={`/categories/${category.name}`}
+                  className="group"
+                >
+                  <div className="flex items-center justify-center h-32 rounded-2xl bg-gradient-to-br from-[#AF140B] to-[#8D0F08] text-white font-bold text-center p-4 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 hover:scale-105">
+
+                    <span className="text-sm md:text-base">
                       {category.name}
-                    </h3>
+                    </span>
+
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
