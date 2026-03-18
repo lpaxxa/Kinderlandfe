@@ -56,6 +56,7 @@ import ManagerReturnPage from './components/manager/ManagerReturnPage';
 // Customer Account
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import OrderHistory from './components/customer/OrderHistory';
+import ReturnRequestPage from './components/customer/ReturnRequestPage';
 import CustomerProfile from './components/customer/CustomerProfile';
 import LoyaltyPoints from './components/customer/LoyaltyPoints';
 import Wishlist from './components/pages/Wishlist';
@@ -279,11 +280,19 @@ function AppContent() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
+                    <Route
                     path="/account/orders"
                     element={
                       <ProtectedRoute>
                         <OrderHistory />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account/return-request"
+                    element={
+                      <ProtectedRoute>
+                        <ReturnRequestPage />
                       </ProtectedRoute>
                     }
                   />
@@ -305,11 +314,7 @@ function AppContent() {
                   />
                   <Route
                     path="/account/wishlist"
-                    element={
-                      <ProtectedRoute>
-                        <Wishlist />
-                      </ProtectedRoute>
-                    }
+                    element={<Wishlist />}
                   />
                 </Routes>
                 <Footer />
@@ -322,11 +327,14 @@ function AppContent() {
   );
 }
 
+import { Toaster } from 'sonner';
+
 export default function App() {
   return (
     <AppProvider>
       <AdminProvider>
         <AppContent />
+        <Toaster position="bottom-right" richColors closeButton icons={{ success: ' ', error: ' ', info: ' ', warning: ' ' }} />
       </AdminProvider>
     </AppProvider>
   );

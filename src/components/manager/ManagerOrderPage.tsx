@@ -166,10 +166,13 @@ export default function ManagerOrderPage() {
         return matchStatus && matchSearch;
     });
 
+    // Sort by latest first
+    const sorted = [...filtered].sort((a, b) => b.orderId - a.orderId);
+
     // Pagination
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
-    const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
     useEffect(() => { setPage(1); }, [search, filterStatus]);
 
@@ -545,9 +548,9 @@ export default function ManagerOrderPage() {
                                                     <Truck className="w-4 h-4" />
                                                     Giao hàng qua GHN
                                                 </p>
-                                                <p className="text-xs text-green-600 mt-1">
+                                                {/* <p className="text-xs text-green-600 mt-1">
                                                     Chuyển trạng thái đơn hàng sang "Đã giao" và trừ kho tồn.
-                                                </p>
+                                                </p> */}
                                                 {(() => {
                                                     const warnings = getOrderStockWarnings(selectedOrder);
                                                     if (warnings.length > 0) return (

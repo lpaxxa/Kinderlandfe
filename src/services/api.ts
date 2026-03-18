@@ -73,16 +73,24 @@ const refreshAccessToken = async (): Promise<string> => {
 
 // Enhanced fetch with automatic token refresh
 export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-  // List of endpoints that should NOT have auth headers
-  const publicEndpoints = [
+  // Endpoints that NEVER need auth (regardless of method)
+  const alwaysPublicEndpoints = [
     '/api/v1/auth/login',
     '/api/v1/auth/login/google',
     '/api/v1/auth/register',
-    '/api/v1/auth/refresh'
+    '/api/v1/auth/refresh',
   ];
 
-  // Check if this is a public endpoint
-  const isPublicEndpoint = publicEndpoints.some(endpoint => url.includes(endpoint));
+  // Endpoints that are public only for GET requests
+  const getOnlyPublicEndpoints = [
+    '/api/v1/reviews/sku/',
+    '/api/v1/reviews/product/',
+  ];
+
+  const method = (options.method || 'GET').toUpperCase();
+  const isAlwaysPublic = alwaysPublicEndpoints.some(endpoint => url.includes(endpoint));
+  const isGetPublic = method === 'GET' && getOnlyPublicEndpoints.some(endpoint => url.includes(endpoint));
+  const isPublicEndpoint = isAlwaysPublic || isGetPublic;
 
   // Only add auth headers for protected endpoints
   if (!isPublicEndpoint) {
@@ -95,6 +103,7 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
         'Authorization': `Bearer ${accessToken}`,
       };
     }
+    console.log('[AUTH DEBUG]', options.method || 'GET', url, 'token?', !!accessToken, 'token prefix:', accessToken?.substring(0, 20));
   }
 
   let response = await fetch(url, options);
@@ -448,6 +457,8 @@ export const api = {
       });
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`API POST ${endpoint} failed:`, response.status, errorBody);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -524,7 +535,12 @@ export const api = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errBody = await response.json();
+          errorMsg = errBody?.message || errBody?.error || errorMsg;
+        } catch { /* ignore parse error */ }
+        throw new Error(errorMsg);
       }
 
       return await response.json();
@@ -627,13 +643,27 @@ export const api = {
   },
 
   /**
-   * Update order status (e.g., cancel, return)
+   * Cancel an order (customer)
+   * Backend endpoint: PUT /api/v1/orders/{orderId}/cancel
+   */
+  cancelOrder: async (orderId: number | string) => {
+    try {
+      const endpoint = `/api/v1/orders/${orderId}/cancel`;
+      return await api.put(endpoint, {});
+    } catch (error) {
+      console.error("Cancel order API error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update order status (manager)
+   * Backend endpoint: PATCH /api/v1/orders/{id} with body { orderStatus }
    */
   updateOrderStatus: async (orderId: number | string, status: string) => {
     try {
-      // Based on Swagger: /api/v1/orders/{orderId}/status?status={status}
-      const endpoint = `/api/v1/orders/${orderId}/status?status=${status}`;
-      return await api.put(endpoint, {});
+      const endpoint = `/api/v1/orders/${orderId}`;
+      return await api.patch(endpoint, { orderStatus: status });
     } catch (error) {
       console.error("Update order status API error:", error);
       throw error;

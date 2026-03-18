@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -14,11 +14,18 @@ import {
     Trash2,
     MoreVertical,
     RefreshCw,
-    ImageIcon
+    ImageIcon,
+    Upload,
+    X,
+    Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { brandApi, Brand, BrandPayload } from '../../services/brandApi';
+import { imageApi } from '../../services/imageApi';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export default function AdminBrandManagement() {
     const navigate = useNavigate();
@@ -27,12 +34,42 @@ export default function AdminBrandManagement() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+    const [saving, setSaving] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState<BrandPayload>({
         name: '',
+        origin: '',
         logoUrl: '',
     });
+
+    // Image file upload state
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>('');
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            toast.error('Chỉ chấp nhận ảnh JPG, PNG, WebP, GIF');
+            return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error('Ảnh không được vượt quá 10 MB');
+            return;
+        }
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    const clearImage = () => {
+        setImageFile(null);
+        setImagePreview('');
+        setFormData((f) => ({ ...f, logoUrl: '' }));
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     const fetchBrands = async () => {
         setLoading(true);
@@ -60,15 +97,30 @@ export default function AdminBrandManagement() {
             toast.error('Vui lòng nhập tên thương hiệu');
             return;
         }
-
+        setSaving(true);
         try {
-            await brandApi.create(formData);
+            // 1. Create brand first
+            const created = await brandApi.create({ name: formData.name, origin: formData.origin, logoUrl: '' });
+
+            // 2. Upload logo if selected
+            if (imageFile) {
+                setUploading(true);
+                try {
+                    const result = await imageApi.upload(imageFile, 'PRODUCT_BRAND', created.id);
+                    await brandApi.update(created.id, { name: formData.name, origin: formData.origin, logoUrl: result.key });
+                } finally {
+                    setUploading(false);
+                }
+            }
+
             toast.success('Thêm thương hiệu thành công!');
             setIsAddDialogOpen(false);
             resetForm();
             fetchBrands();
         } catch (error) {
             toast.error('Thêm thương hiệu thất bại');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -78,15 +130,30 @@ export default function AdminBrandManagement() {
             toast.error('Vui lòng nhập tên thương hiệu');
             return;
         }
-
+        setSaving(true);
         try {
-            await brandApi.update(editingBrand.id, formData);
+            let logoUrl = formData.logoUrl;
+
+            // Upload new logo if selected
+            if (imageFile) {
+                setUploading(true);
+                try {
+                    const result = await imageApi.upload(imageFile, 'PRODUCT_BRAND', editingBrand.id);
+                    logoUrl = result.key;
+                } finally {
+                    setUploading(false);
+                }
+            }
+
+            await brandApi.update(editingBrand.id, { name: formData.name, origin: formData.origin, logoUrl });
             toast.success('Cập nhật thương hiệu thành công!');
             setEditingBrand(null);
             resetForm();
             fetchBrands();
         } catch (error) {
             toast.error('Cập nhật thương hiệu thất bại');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -103,18 +170,15 @@ export default function AdminBrandManagement() {
     };
 
     const resetForm = () => {
-        setFormData({
-            name: '',
-            logoUrl: '',
-        });
+        setFormData({ name: '', origin: '', logoUrl: '' });
+        clearImage();
     };
 
     const openEditDialog = (brand: Brand) => {
         setEditingBrand(brand);
-        setFormData({
-            name: brand.name,
-            logoUrl: brand.logoUrl || '',
-        });
+        setFormData({ name: brand.name, origin: brand.origin || '', logoUrl: brand.logoUrl || '' });
+        setImageFile(null);
+        setImagePreview(brand.logoUrl || '');
     };
 
     return (
@@ -164,21 +228,49 @@ export default function AdminBrandManagement() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="logoUrl">URL Logo</Label>
+                                            <Label htmlFor="origin">Xuất xứ</Label>
                                             <Input
-                                                id="logoUrl"
-                                                value={formData.logoUrl || ''}
-                                                onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-                                                placeholder="https://..."
+                                                id="origin"
+                                                value={formData.origin || ''}
+                                                onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                                                placeholder="VD: Đan Mạch, Mỹ, Nhật Bản"
                                             />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Logo</Label>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                            />
+                                            {imagePreview ? (
+                                                <div className="relative inline-block">
+                                                    <img src={imagePreview} alt="preview" className="h-24 object-contain rounded border" />
+                                                    <button type="button" onClick={clearImage}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button type="button" onClick={() => fileInputRef.current?.click()}
+                                                    className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#AF140B]/40 hover:bg-red-50/50 transition-all cursor-pointer">
+                                                    <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                                                    <p className="text-sm text-gray-500">Nhấn để chọn logo</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP, GIF · Tối đa 10 MB</p>
+                                                </button>
+                                            )}
+                                            {imagePreview && !imageFile && (
+                                                <button type="button" onClick={() => fileInputRef.current?.click()}
+                                                    className="mt-1 text-xs text-[#AF140B] hover:underline">Đổi ảnh khác</button>
+                                            )}
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                                            Hủy
-                                        </Button>
-                                        <Button onClick={handleAddBrand} className="bg-[#AF140B] hover:bg-[#8e1009] text-white">
-                                            Lưu thương hiệu
+                                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
+                                        <Button onClick={handleAddBrand} className="bg-[#AF140B] hover:bg-[#8e1009] text-white" disabled={saving || uploading}>
+                                            {saving || uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{uploading ? 'Đang tải ảnh...' : 'Lưu...'}</> : 'Lưu thương hiệu'}
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -211,19 +303,20 @@ export default function AdminBrandManagement() {
                                     <TableHead className="w-[80px] pl-6">ID</TableHead>
                                     <TableHead className="w-[100px]">Logo</TableHead>
                                     <TableHead>Tên thương hiệu</TableHead>
+                                    <TableHead>Xuất xứ</TableHead>
                                     <TableHead className="w-[100px] pr-6 text-right">Thao tác</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-32 text-center text-gray-500">
+                                        <TableCell colSpan={5} className="h-32 text-center text-gray-500">
                                             Đang tải dữ liệu...
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredBrands.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-32 text-center text-gray-500">
+                                        <TableCell colSpan={5} className="h-32 text-center text-gray-500">
                                             Không tìm thấy thương hiệu nào
                                         </TableCell>
                                     </TableRow>
@@ -244,6 +337,9 @@ export default function AdminBrandManagement() {
                                             </TableCell>
                                             <TableCell>
                                                 <span className="font-semibold text-gray-900">{brand.name}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-sm text-gray-600">{brand.origin || '—'}</span>
                                             </TableCell>
                                             <TableCell className="pr-6 text-right">
                                                 <DropdownMenu>
@@ -276,7 +372,7 @@ export default function AdminBrandManagement() {
                 </Card>
 
                 {/* Edit Dialog */}
-                <Dialog open={!!editingBrand} onOpenChange={(open: boolean) => !open && setEditingBrand(null)}>
+                <Dialog open={!!editingBrand} onOpenChange={(open: boolean) => { if (!open) { setEditingBrand(null); resetForm(); } }}>
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Chỉnh sửa thương hiệu</DialogTitle>
@@ -294,20 +390,49 @@ export default function AdminBrandManagement() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-logo">URL Logo</Label>
+                                <Label htmlFor="edit-origin">Xuất xứ</Label>
                                 <Input
-                                    id="edit-logo"
-                                    value={formData.logoUrl || ''}
-                                    onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+                                    id="edit-origin"
+                                    value={formData.origin || ''}
+                                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                                    placeholder="VD: Đan Mạch, Mỹ, Nhật Bản"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Logo</Label>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                                {imagePreview ? (
+                                    <div className="relative inline-block">
+                                        <img src={imagePreview} alt="preview" className="h-24 object-contain rounded border" />
+                                        <button type="button" onClick={clearImage}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#AF140B]/40 hover:bg-red-50/50 transition-all cursor-pointer">
+                                        <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                                        <p className="text-sm text-gray-500">Nhấn để chọn logo</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP, GIF · Tối đa 10 MB</p>
+                                    </button>
+                                )}
+                                {imagePreview && !imageFile && (
+                                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                                        className="mt-1 text-xs text-[#AF140B] hover:underline">Đổi ảnh khác</button>
+                                )}
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setEditingBrand(null)}>
-                                Hủy
-                            </Button>
-                            <Button onClick={handleUpdateBrand} className="bg-[#AF140B] hover:bg-[#8e1009] text-white">
-                                Lưu thay đổi
+                            <Button variant="outline" onClick={() => { setEditingBrand(null); resetForm(); }}>Hủy</Button>
+                            <Button onClick={handleUpdateBrand} className="bg-[#AF140B] hover:bg-[#8e1009] text-white" disabled={saving || uploading}>
+                                {saving || uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{uploading ? 'Đang tải ảnh...' : 'Lưu...'}</> : 'Lưu thay đổi'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

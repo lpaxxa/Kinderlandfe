@@ -203,7 +203,9 @@ export default function ManagerReturnPage() {
             setActionSuccess('Đã từ chối yêu cầu hoàn trả.');
             setTimeout(() => setActionSuccess(null), 3000);
         } catch (err: unknown) {
-            setActionError(await parseApiError(err));
+            const msg = await parseApiError(err);
+            console.error('Reject error details:', err);
+            setActionError(msg);
         } finally {
             setActionLoading(false);
         }

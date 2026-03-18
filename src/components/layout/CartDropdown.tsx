@@ -38,7 +38,7 @@ export default function CartDropdown() {
   if (cart.length === 0) {
     return (
       <div className="absolute top-full right-0 w-96 z-50 -mt-2 pt-4 pb-2">
-        <div className="bg-white rounded-2xl shadow-2xl border-2 border-[#78A2D2]/30 p-6">
+        <div className="bg-white rounded-2xl shadow-2xl border border-[#AF140B]/20 p-6">
           <div className="text-center py-8">
             <ShoppingCart className="size-16 text-gray-300 mx-auto mb-3" />
             <p className="text-[#2C2C2C] font-semibold">Giỏ hàng trống</p>
@@ -50,7 +50,7 @@ export default function CartDropdown() {
 
   return (
     <div className="absolute top-full right-0 w-96 z-50 -mt-2 pt-4 pb-2">
-      <div className="bg-white rounded-2xl shadow-2xl border-2 border-[#78A2D2]/30 p-6">
+      <div className="bg-white rounded-2xl shadow-2xl border border-[#AF140B]/20 p-6">
         <h3 className="font-bold text-[#2C2C2C] text-lg mb-4">
           Giỏ hàng ({cart.reduce((sum, item) => sum + item.quantity, 0)})
         </h3>
@@ -73,10 +73,10 @@ export default function CartDropdown() {
             return (
               <div
                 key={`cart-dropdown-${cartItemId || index}`}
-                className="flex gap-3 p-3 hover:bg-[#78A2D2]/10 rounded-lg transition-colors border border-gray-100"
+                className="flex gap-3 p-3 hover:bg-[#FFE5E3] rounded-lg transition-colors border border-gray-100"
               >
                 {/* Product Image */}
-                <div className="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-[#78A2D2]/20">
+                <div className="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                   <img
                     src={imageUrl}
                     alt={name}
@@ -110,7 +110,7 @@ export default function CartDropdown() {
                         }
                         else toast.error("Không tìm thấy ID giỏ hàng");
                       }}
-                      className="w-7 h-7 flex items-center justify-center border-2 border-[#78A2D2]/40 text-[#78A2D2] rounded-full hover:bg-[#78A2D2]/20 transition-colors"
+                      className="w-7 h-7 flex items-center justify-center border-2 border-[#AF140B]/30 text-[#AF140B] rounded-full hover:bg-[#FFE5E3] transition-colors"
                     >
                       <Minus className="size-4" />
                     </button>
@@ -121,7 +121,7 @@ export default function CartDropdown() {
                         const val = parseInt(e.target.value) || 1;
                         if (cartItemId) updateQuantity(cartItemId, val);
                       }}
-                      className="w-12 h-7 text-center border-2 border-[#78A2D2]/30 bg-white text-[#2C2C2C] rounded-lg font-semibold text-sm focus:outline-none focus:border-[#78A2D2]"
+                      className="w-12 h-7 text-center border-2 border-[#AF140B]/20 bg-white text-[#2C2C2C] rounded-lg font-semibold text-sm focus:outline-none focus:border-[#AF140B]"
                       min="1"
                       max="99"
                     />
@@ -148,7 +148,7 @@ export default function CartDropdown() {
                   >
                     <Trash2 className="size-4" />
                   </button>
-                  <p className="font-bold text-[#78A2D2] text-sm">
+                  <p className="font-bold text-[#AF140B] text-sm">
                     {formatPrice(price * (item.quantity || 1))}
                   </p>
                 </div>
@@ -158,13 +158,13 @@ export default function CartDropdown() {
         </div>
 
         {/* Divider */}
-        <div className="border-t-2 border-dashed border-[#78A2D2]/30 my-4"></div>
+        <div className="border-t-2 border-dashed border-[#AF140B]/20 my-4"></div>
 
         {/* Total */}
-        <div className="bg-[#FEFFAF]/30 rounded-xl p-4 mb-4 border border-[#78A2D2]/20">
+        <div className="bg-[#FFE5E3]/40 rounded-xl p-4 mb-4 border border-[#AF140B]/15">
           <div className="flex justify-between items-center">
             <span className="font-semibold text-[#2C2C2C]">Tổng cộng</span>
-            <span className="font-bold text-[#78A2D2] text-xl">
+            <span className="font-bold text-[#AF140B] text-xl">
               {formatPrice(subtotal)}
             </span>
           </div>
@@ -176,11 +176,11 @@ export default function CartDropdown() {
             <input
               type="checkbox"
               defaultChecked
-              className="mt-0.5 rounded border-[#78A2D2]/30"
+              className="mt-0.5 rounded border-[#AF140B]/30 accent-[#AF140B]"
             />
             <span>
               Tôi đã đọc và đồng ý với{' '}
-              <a href="#" className="text-[#78A2D2] hover:underline">
+              <a href="#" className="text-[#AF140B] hover:underline">
                 Chính sách bảo mật
               </a>{' '}
               và{' '}
@@ -195,14 +195,14 @@ export default function CartDropdown() {
         <div className="flex gap-3">
           <Link
             to="/cart"
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#78A2D2] text-[#78A2D2] rounded-xl hover:bg-[#78A2D2]/20 transition-colors font-semibold"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-[#AF140B] text-[#AF140B] rounded-xl hover:bg-[#FFE5E3] transition-colors font-semibold text-sm"
           >
-            <ShoppingCart className="size-4" />
+            <ShoppingCart className="size-3.5" />
             Xem giỏ hàng
           </Link>
           <button
             onClick={handleCheckout}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#FEFFAF] text-[#2C2C2C] rounded-xl hover:bg-[#F0F09F] transition-colors font-semibold shadow-lg border-2 border-[#78A2D2]"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#AF140B] text-white rounded-xl hover:bg-[#8D0F08] transition-colors font-semibold text-sm shadow-lg"
           >
             Thanh toán ngay
           </button>

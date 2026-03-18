@@ -16,8 +16,9 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState("default");
   const [priceRange, setPriceRange] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [selectedCategory, setSelectedCategory] =
-    useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAge, setSelectedAge] = useState("all");
+  const [ages, setAges] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const searchTerm = searchParams.get("search") || "";
@@ -54,12 +55,16 @@ export default function ProductsPage() {
     const matchesCategory =
       selectedCategory === "all" ||
       product.category === selectedCategory;
+    const matchesAge = 
+      selectedAge === "all" || 
+      product.ageRange === selectedAge;
 
     return (
       matchesSearch &&
       matchesPrice &&
       matchesBrand &&
-      matchesCategory
+      matchesCategory &&
+      matchesAge
     );
   });
 
@@ -96,6 +101,7 @@ export default function ProductsPage() {
     priceRange,
     selectedBrand,
     selectedCategory,
+    selectedAge,
   ]);
 
   useEffect(() => {
@@ -128,6 +134,7 @@ export default function ProductsPage() {
             originalPrice: discount > 0 ? originalPrice : null,
             category: item.categoryName,
             brand: item.brandName,
+            ageRange: item.ageRange,
 
             image: item.imageUrl,
 
@@ -152,6 +159,12 @@ export default function ProductsPage() {
         ];
 
         setCategories(uniqueCategories);
+
+        const uniqueAges = [
+          ...new Set(mappedProducts.map((p) => p.ageRange).filter(Boolean)),
+        ] as string[];
+        
+        setAges(uniqueAges);
 
       } catch (error) {
         console.error("Lỗi lấy products:", error);
@@ -193,7 +206,7 @@ export default function ProductsPage() {
               Bộ lọc & Sắp xếp
             </h3>
           </div>
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-bold text-gray-800 mb-2">
                 Sắp xếp theo:
@@ -269,6 +282,25 @@ export default function ProductsPage() {
                 {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Độ tuổi:
+              </label>
+              <select
+                value={selectedAge}
+                onChange={(e) =>
+                  setSelectedAge(e.target.value)
+                }
+                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#78A2D2] focus:border-[#78A2D2] font-semibold text-gray-800"
+              >
+                <option value="all">Tất cả độ tuổi</option>
+                {ages.map((age) => (
+                  <option key={age} value={age}>
+                    {age}
                   </option>
                 ))}
               </select>

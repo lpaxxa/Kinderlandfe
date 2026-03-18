@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import ProductCard from "../shop/ProductCard";
@@ -75,7 +75,7 @@ export default function BrandsPage() {
         setProductsLoading(true);
 
         const response = await api.get(
-          `/api/v1/products?brand=${brandName}`
+          `/api/v1/products/browse?brandName=${encodeURIComponent(brandName)}`
         );
 
         const data = response.data;
@@ -255,8 +255,15 @@ export default function BrandsPage() {
                     alt={brand.name}
                     className="h-20 w-20 object-contain mx-auto mb-4"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://via.placeholder.com/80?text=Logo";
+                      const img = e.target as HTMLImageElement;
+                      img.style.display = 'none';
+                      const parent = img.parentElement;
+                      if (parent && !parent.querySelector('.brand-fallback')) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'brand-fallback h-20 w-20 mx-auto mb-4 rounded-xl bg-gray-100 flex items-center justify-center text-3xl';
+                        fallback.textContent = '🎁';
+                        parent.insertBefore(fallback, img);
+                      }
                     }}
                   />
 

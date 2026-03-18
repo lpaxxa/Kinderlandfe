@@ -5,11 +5,13 @@ import { api } from './api';
 export interface Brand {
     id: number;
     name: string;
+    origin: string | null;
     logoUrl: string | null;
 }
 
 export interface BrandPayload {
     name: string;
+    origin?: string | null;
     logoUrl?: string | null;
 }
 

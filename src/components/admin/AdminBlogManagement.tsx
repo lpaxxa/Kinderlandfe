@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Plus, Search, Edit2, Trash2, Eye, EyeOff,
     FileText, Calendar, Tag, ChevronLeft,
     Image as ImageIcon, Save, X, BookOpen,
     ChevronLeft as Prev, ChevronRight as Next,
-    Loader2, RefreshCw, Settings
+    Loader2, RefreshCw, Settings, Upload
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -13,6 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { toast } from "sonner";
 import { blogApi, BlogItem, CreateBlogPayload } from "../../services/blogApi";
 import { blogCategoryApi, BlogCategory } from "../../services/blogCategoryApi";
+import { imageApi } from "../../services/imageApi";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB (matches backend config)
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 type ViewMode = "list" | "create" | "edit";
 type ActiveTab = "posts" | "categories";
@@ -44,10 +48,16 @@ export default function AdminBlogManagement() {
     const [formData, setFormData] = useState({
         title: "",
         content: "",
-        categoryName: "",
+        categoryId: "",
         imageUrl: "",
         status: false,
     });
+
+    // Image file upload state
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>("");
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // ── Fetch posts ──
     const fetchPosts = useCallback(async (page = 0, keyword = "") => {
@@ -118,15 +128,41 @@ export default function AdminBlogManagement() {
         }
     };
 
+    // ── Image file helpers ──
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            toast.error('Chỉ chấp nhận ảnh JPG, PNG, WebP, GIF');
+            return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error('Ảnh không được vượt quá 10 MB');
+            return;
+        }
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    const clearImage = () => {
+        setImageFile(null);
+        setImagePreview("");
+        setFormData((f) => ({ ...f, imageUrl: "" }));
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     // ── Post helpers ──
     const resetForm = () => {
-        setFormData({ title: "", content: "", categoryName: "", imageUrl: "", status: false });
+        setFormData({ title: "", content: "", categoryId: "", imageUrl: "", status: false });
         setEditingPost(null);
+        clearImage();
     };
     const openCreate = () => { resetForm(); setViewMode("create"); };
     const openEdit = (post: BlogItem) => {
         setEditingPost(post);
-        setFormData({ title: post.title, content: post.content, categoryName: post.categoryName, imageUrl: post.imageUrl, status: post.status });
+        setFormData({ title: post.title, content: post.content, categoryId: String(post.categoryId), imageUrl: post.imageUrl, status: post.status });
+        setImageFile(null);
+        setImagePreview(post.imageUrl || "");
         setViewMode("edit");
     };
     const handleBack = () => { resetForm(); setViewMode("list"); };
@@ -135,16 +171,32 @@ export default function AdminBlogManagement() {
     const handleSave = async () => {
         if (!formData.title.trim()) { toast.error("Vui lòng nhập tiêu đề!"); return; }
         if (!formData.content.trim()) { toast.error("Vui lòng nhập nội dung!"); return; }
-        if (!formData.categoryName) { toast.error("Vui lòng chọn danh mục!"); return; }
-        const payload: CreateBlogPayload = {
-            title: formData.title.trim(),
-            content: formData.content.trim(),
-            categoryName: formData.categoryName,
-            imageUrl: formData.imageUrl.trim() || undefined,
-            status: formData.status,
-        };
+        if (!formData.categoryId) { toast.error("Vui lòng chọn danh mục!"); return; }
+
         setIsSaving(true);
         try {
+            // Upload image file if selected
+            let finalImageUrl = formData.imageUrl;
+            if (imageFile) {
+                setUploadingImage(true);
+                try {
+                    // Use editingPost id if editing, otherwise use 0 as placeholder
+                    const entityId = editingPost?.blogId ?? 0;
+                    const result = await imageApi.upload(imageFile, 'BLOG', entityId);
+                    finalImageUrl = result.key; // Store S3 key (backend resolves to presigned URL)
+                } finally {
+                    setUploadingImage(false);
+                }
+            }
+
+            const payload: CreateBlogPayload = {
+                title: formData.title.trim(),
+                content: formData.content.trim(),
+                categoryId: Number(formData.categoryId),
+                imageUrl: finalImageUrl || undefined,
+                status: formData.status,
+            };
+
             if (editingPost) {
                 await blogApi.updateBlog(editingPost.blogId, payload);
                 toast.success("Cập nhật bài viết thành công!");
@@ -176,7 +228,7 @@ export default function AdminBlogManagement() {
         try {
             await blogApi.updateBlog(post.blogId, {
                 title: post.title, content: post.content,
-                categoryName: post.categoryName, imageUrl: post.imageUrl, status: !post.status,
+                categoryId: post.categoryId, imageUrl: post.imageUrl, status: !post.status,
             });
             toast.success(!post.status ? "Đã đăng bài viết." : "Đã chuyển về Nháp.");
             await fetchPosts(currentPage);
@@ -266,13 +318,13 @@ export default function AdminBlogManagement() {
                                     </Label>
                                     <select
                                         id="category"
-                                        value={formData.categoryName}
-                                        onChange={(e) => setFormData((f) => ({ ...f, categoryName: e.target.value }))}
+                                        value={formData.categoryId}
+                                        onChange={(e) => setFormData((f) => ({ ...f, categoryId: e.target.value }))}
                                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#AF140B]/30 focus:border-[#AF140B] bg-white"
                                     >
                                         <option value="">-- Chọn danh mục --</option>
                                         {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
                                         ))}
                                     </select>
                                     {categories.length === 0 && (
@@ -285,24 +337,53 @@ export default function AdminBlogManagement() {
                         <Card>
                             <CardHeader className="pb-3"><CardTitle className="text-base">Ảnh bìa</CardTitle></CardHeader>
                             <CardContent>
-                                <Input placeholder="https://..."
-                                    value={formData.imageUrl}
-                                    onChange={(e) => setFormData((f) => ({ ...f, imageUrl: e.target.value }))}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    onChange={handleFileChange}
+                                    className="hidden"
                                 />
-                                <div className="mt-3 rounded-lg overflow-hidden border-2 border-dashed border-gray-200 aspect-video bg-gray-50 flex flex-col items-center justify-center">
-                                    {formData.imageUrl
-                                        ? <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover"
-                                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                                        : <><ImageIcon className="w-8 h-8 text-gray-300 mb-1" /><span className="text-xs text-gray-400">Chưa có ảnh</span></>
+                                <div className="rounded-lg overflow-hidden border-2 border-dashed border-gray-200 aspect-video bg-gray-50 flex flex-col items-center justify-center relative">
+                                    {imagePreview
+                                        ? <>
+                                            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover"
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                                            <button
+                                                type="button"
+                                                onClick={clearImage}
+                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-md"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                        : <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                        >
+                                            <Upload className="w-8 h-8 text-gray-300 mb-1" />
+                                            <span className="text-sm text-gray-500">Nhấn để chọn ảnh</span>
+                                            <span className="text-xs text-gray-400 mt-1">JPG, PNG, WebP, GIF · Tối đa 10 MB</span>
+                                        </button>
                                     }
                                 </div>
+                                {imagePreview && (
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="mt-2 text-xs text-[#AF140B] hover:underline"
+                                    >
+                                        Đổi ảnh khác
+                                    </button>
+                                )}
                             </CardContent>
                         </Card>
 
                         <div className="flex gap-2">
                             <Button variant="outline" className="flex-1" onClick={handleBack}><X className="w-4 h-4 mr-1.5" />Huỷ</Button>
-                            <Button className="flex-1 bg-[#AF140B] hover:bg-[#8B0000] text-white" onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Đang lưu...</> : <><Save className="w-4 h-4 mr-1.5" />Lưu bài</>}
+                            <Button className="flex-1 bg-[#AF140B] hover:bg-[#8B0000] text-white" onClick={handleSave} disabled={isSaving || uploadingImage}>
+                                {isSaving || uploadingImage ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{uploadingImage ? 'Đang tải ảnh...' : 'Đang lưu...'}</> : <><Save className="w-4 h-4 mr-1.5" />Lưu bài</>}
                             </Button>
                         </div>
                     </div>

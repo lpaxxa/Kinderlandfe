@@ -166,47 +166,109 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("myAccountId");
     setCart([]);
     setVoucher(null);
-    setWishlistItems([]);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    setWishlistItemsState([]);
+    // Keep local wishlist in localStorage so guest items persist
   };
 
-  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
+  const [wishlistItems, setWishlistItemsState] = useState<any[]>(() => {
+    // On init, load guest wishlist from localStorage
+    try {
+      const saved = localStorage.getItem('guestWishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const wishlistCount = wishlistItems.length;
 
+  // Wrapper: always persist guest wishlist to localStorage
+  const setWishlistItems = (items: any[]) => {
+    setWishlistItemsState(items);
+    // Only persist to localStorage when NOT logged in
+    if (!localStorage.getItem('accessToken')) {
+      localStorage.setItem('guestWishlist', JSON.stringify(items));
+    }
+  };
+
+  // Sync wishlist: on login, merge local wishlist to backend then fetch full list
+  const syncGuestWishlistToBackend = async () => {
+    try {
+      const saved = localStorage.getItem('guestWishlist');
+      const guestItems: any[] = saved ? JSON.parse(saved) : [];
+      if (guestItems.length > 0) {
+        console.log('[Wishlist Sync] Syncing', guestItems.length, 'guest items to backend...');
+        let synced = 0;
+        for (const item of guestItems) {
+          const pid = item.productId || item.id;
+          if (pid) {
+            try {
+              await api.addWishlist(pid);
+              synced++;
+              console.log('[Wishlist Sync] Product', pid, 'synced');
+            } catch (err: any) {
+              // 400 = already exists, that's fine
+              console.warn('[Wishlist Sync] Product', pid, 'skipped:', err?.message || err);
+            }
+          }
+        }
+        // Clear guest wishlist after sync
+        localStorage.removeItem('guestWishlist');
+        if (synced > 0) {
+          console.log('[Wishlist Sync] Done:', synced, 'items synced');
+        }
+      }
+    } catch (err) {
+      console.error('[Wishlist Sync] Failed:', err);
+    }
+  };
+
   React.useEffect(() => {
-    const fetchInitialWishlistCount = async () => {
+    const fetchInitialWishlist = async () => {
       const token = localStorage.getItem("accessToken");
       if (token && user) {
+        // First sync any guest items to backend
+        await syncGuestWishlistToBackend();
+        // Then fetch full wishlist from backend
         try {
           const res = await api.get("/api/v1/wishlist");
           let items = res.data || res.items || res;
           if (Array.isArray(items)) {
-            setWishlistItems(items);
+            setWishlistItemsState(items);
           } else if (items && Array.isArray(items.items)) {
-            setWishlistItems(items.items);
+            setWishlistItemsState(items.items);
           }
         } catch (error) {
-          console.error("Failed to fetch initial wishlist count:", error);
+          console.error("Failed to fetch wishlist:", error);
         }
       }
     };
-    fetchInitialWishlistCount();
+    fetchInitialWishlist();
   }, [user]);
 
   const addWishlistItemGlobal = (item: any) => {
-    setWishlistItems(prev => {
-      // Avoid duplicates
+    setWishlistItemsState(prev => {
       const exists = prev.some(i => (i.productId || i.id) === (item.productId || item.id));
       if (exists) return prev;
-      return [...prev, item];
+      const updated = [...prev, item];
+      // Persist to localStorage if guest
+      if (!localStorage.getItem('accessToken')) {
+        localStorage.setItem('guestWishlist', JSON.stringify(updated));
+      }
+      return updated;
     });
   };
 
   const removeWishlistItemGlobal = (productId: number) => {
-    setWishlistItems(prev => prev.filter(item => (item.productId || item.id) !== productId));
+    setWishlistItemsState(prev => {
+      const updated = prev.filter(item => (item.productId || item.id) !== productId);
+      if (!localStorage.getItem('accessToken')) {
+        localStorage.setItem('guestWishlist', JSON.stringify(updated));
+      }
+      return updated;
+    });
   };
 
   // POST /api/v1/cart/add

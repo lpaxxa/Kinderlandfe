@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { CreditCard, Truck, Tag, AlertCircle, MapPin, Loader2 } from 'lucide-react';
+import { CreditCard, Truck, AlertCircle, Loader2, Plus } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'sonner';
+import { accountApi, AddressRequest } from '../../services/accountApi';
+
+const EMPTY_ADDRESS: AddressRequest = {
+  street: '',
+  provinceId: '',
+  provinceName: '',
+  districtId: '',
+  districtName: '',
+  wardId: '',
+  wardName: '',
+};
 
 export default function Checkout() {
   const { cart, user, voucher, applyVoucher, removeVoucher, removeFromCart } = useApp();
@@ -19,10 +30,14 @@ export default function Checkout() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [customerInfo, setCustomerInfo] = useState({
-    name: user?.name || '',
+    name: user?.name || user?.username || '',
     phone: user?.phone || '',
     address: user?.address || '',
   });
+
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [newAddressForm, setNewAddressForm] = useState<AddressRequest>({ ...EMPTY_ADDRESS });
+  const [addressSaving, setAddressSaving] = useState(false);
 
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherError, setVoucherError] = useState('');
@@ -39,10 +54,9 @@ export default function Checkout() {
         if (addrList.length > 0) {
           const defaultAddr = addrList.find((a: any) => a.isDefault) || addrList[0];
           setSelectedAddressId(defaultAddr.addressId || defaultAddr.id);
-          setCustomerInfo(prev => ({
-            ...prev,
-            address: defaultAddr.street ? `${defaultAddr.street}, ${defaultAddr.wardName}, ${defaultAddr.districtName}, ${defaultAddr.provinceName}` : defaultAddr.address || prev.address
-          }));
+          setAddingAddress(false);
+        } else {
+          setAddingAddress(true);
         }
       } catch (error) {
         console.error("Failed to fetch addresses:", error);
@@ -58,6 +72,37 @@ export default function Checkout() {
       setLoadingAddresses(false);
     }
   }, [user]);
+
+  const handleNewAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewAddressForm({ ...newAddressForm, [e.target.name]: e.target.value });
+  };
+
+  const submitNewAddress = async () => {
+    if (!newAddressForm.street.trim() || !newAddressForm.provinceName.trim() || !newAddressForm.districtName.trim() || !newAddressForm.wardName.trim()) {
+      toast.error('Vui lòng điền đầy đủ thông tin địa chỉ!');
+      return;
+    }
+    setAddressSaving(true);
+    try {
+      await accountApi.addAddress(newAddressForm);
+      toast.success('Thêm địa chỉ thành công!');
+      setNewAddressForm({ ...EMPTY_ADDRESS });
+      
+      const res = await api.getMyAddresses();
+      const addrList = res.data || res || [];
+      setAddresses(addrList);
+      
+      if (addrList.length > 0) {
+        const newAddr = addrList[addrList.length - 1];
+        setSelectedAddressId(newAddr.addressId || newAddr.id);
+        setAddingAddress(false);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Thêm địa chỉ thất bại');
+    } finally {
+      setAddressSaving(false);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -100,7 +145,7 @@ export default function Checkout() {
     e.preventDefault();
 
     if (!selectedAddressId) {
-      toast.error("Vui lòng chọn địa chỉ giao hàng!");
+      toast.error("Vui lòng thêm và chọn địa chỉ giao hàng!");
       return;
     }
 
@@ -133,9 +178,6 @@ export default function Checkout() {
         console.warn("Could not find orderId in response:", orderRes);
       }
 
-      toast.dismiss(loadingToast);
-      toast.success("🎉 Đặt hàng thành công!");
-
       // 5. Selective Cart Cleanup: Only remove items that were actually ordered
       // We do this BEFORE potentially redirecting to a payment gateway
       const itemsToRemove = [...displayItems];
@@ -155,30 +197,41 @@ export default function Checkout() {
 
       // 6. Handle Payment Redirection or Success Page
       if (paymentMethod === 'CARD' && orderId) {
-        const checkoutLoadingToast = toast.loading("Đang chuyển hướng đến cổng thanh toán...");
+        // VNPay: redirect immediately, no toast
         try {
           const checkoutRes = await api.checkoutOrder(orderId, "VNPAY");
-          toast.dismiss(checkoutLoadingToast);
+          toast.dismiss(loadingToast);
 
           if (checkoutRes.success && checkoutRes.data) {
-            // Redirect to VNPay
+            // Redirect to VNPay payment page
             window.location.href = checkoutRes.data;
-            return; // Exit as browser is navigating away
+            return;
           } else {
             throw new Error("Không lấy được link thanh toán");
           }
         } catch (paymentErr: any) {
-          toast.dismiss(checkoutLoadingToast);
+          toast.dismiss(loadingToast);
           toast.error("Lỗi khởi tạo thanh toán: " + (paymentErr.message || "Vui lòng thử lại"));
-          // Fallback: stay on success page or similar? 
-          // For now, continue to success page but warn about payment setup
+          return;
         }
       }
+
+      // COD: show success toast
+      toast.dismiss(loadingToast);
+      toast.success("🎉 Đặt hàng thành công!");
+
+      // Build address string from the selected address
+      const selectedAddr = addresses.find((a: any) => (a.addressId || a.id) === selectedAddressId);
+      const addressStr = selectedAddr
+        ? [selectedAddr.street, selectedAddr.wardName, selectedAddr.districtName, selectedAddr.provinceName].filter(Boolean).join(', ')
+        : customerInfo.address;
 
       navigate('/order-success', {
         state: {
           orderInfo: {
-            ...customerInfo,
+            name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || customerInfo.name),
+            phone: user?.phone || customerInfo.phone,
+            address: addressStr,
             total,
             paymentMethod,
             orderDate: new Date().toISOString()
@@ -235,9 +288,14 @@ export default function Checkout() {
                   {loadingAddresses && <Loader2 className="animate-spin text-[#AF140B]" />}
                 </div>
 
-                {addresses.length > 0 ? (
+                {addresses.length > 0 && !addingAddress && (
                   <div className="space-y-4">
-                    <p className="text-sm font-bold text-gray-700">Chọn địa chỉ nhận hàng:</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-bold text-gray-700">Chọn địa chỉ nhận hàng:</p>
+                      <button type="button" onClick={() => setAddingAddress(true)} className="text-[#AF140B] text-sm font-bold flex items-center gap-1 hover:underline">
+                        <Plus className="size-4" /> Thêm địa chỉ mới
+                      </button>
+                    </div>
                     <div className="grid gap-3">
                       {addresses.map((addr) => {
                         const id = addr.addressId || addr.id;
@@ -245,18 +303,12 @@ export default function Checkout() {
                         return (
                           <div
                             key={id}
-                            onClick={() => {
-                              setSelectedAddressId(id);
-                              setCustomerInfo(prev => ({
-                                ...prev,
-                                address: addr.street ? `${addr.street}, ${addr.wardName}, ${addr.districtName}, ${addr.provinceName}` : addr.address || prev.address
-                              }));
-                            }}
+                            onClick={() => setSelectedAddressId(id)}
                             className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${isSelected ? 'border-[#AF140B] bg-[#FFE5E3]' : 'border-gray-200 hover:border-[#AF140B]/30'
                               }`}
                           >
                             <div className="flex items-start gap-3">
-                              <MapPin className={`size-5 mt-1 ${isSelected ? 'text-[#AF140B]' : 'text-gray-400'}`} />
+                              <input type="radio" readOnly checked={isSelected} className="mt-1.5 size-4 text-[#AF140B] border-gray-300 focus:ring-[#AF140B]" />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-bold text-gray-800">
@@ -278,61 +330,51 @@ export default function Checkout() {
                       })}
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {addingAddress && (
                   <div className="space-y-4">
-                    {!loadingAddresses && (
+                    {addresses.length === 0 && !loadingAddresses && (
                       <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-xl text-orange-700 text-sm font-medium flex items-center gap-2">
                         <AlertCircle className="size-5" />
-                        Bạn chưa có địa chỉ giao hàng nào.
+                        Bạn chưa có địa chỉ giao hàng nào. Vui lòng thêm địa chỉ!
                       </div>
                     )}
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Họ và Tên *
-                      </label>
-                      <input
-                        type="text"
-                        value={customerInfo.name}
-                        onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, name: e.target.value })
-                        }
-                        className="w-full px-4 py-3 border-2 border-gray-200 bg-white text-gray-800 rounded-xl focus:ring-2 focus:ring-[#AF140B] focus:border-[#AF140B] transition-all"
-                        placeholder="Nguyễn Văn A"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Số Điện Thoại *
-                      </label>
-                      <input
-                        type="tel"
-                        value={customerInfo.phone}
-                        onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, phone: e.target.value })
-                        }
-                        className="w-full px-4 py-3 border-2 border-gray-200 bg-white text-gray-800 rounded-xl focus:ring-2 focus:ring-[#AF140B] focus:border-[#AF140B] transition-all"
-                        placeholder="0912345678"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Địa Chỉ *
-                      </label>
-                      <textarea
-                        value={customerInfo.address}
-                        onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, address: e.target.value })
-                        }
-                        className="w-full px-4 py-3 border-2 border-gray-200 bg-white text-gray-800 rounded-xl focus:ring-2 focus:ring-[#AF140B] focus:border-[#AF140B] transition-all"
-                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                        rows={3}
-                        required
-                      />
+                    
+                    <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-[#AF140B]/50">
+                      <h3 className="font-bold text-gray-800 mb-3 text-lg">Thêm địa chỉ giao hàng mới</h3>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">Số nhà, tên đường *</label>
+                          <input type="text" name="street" value={newAddressForm.street} onChange={handleNewAddressChange} className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-[#AF140B] focus:border-[#AF140B]" placeholder="Ví dụ: 123 Đường B" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Tỉnh / Thành phố *</label>
+                            <input type="text" name="provinceName" value={newAddressForm.provinceName} onChange={handleNewAddressChange} className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-[#AF140B] focus:border-[#AF140B]" placeholder="TP.HCM" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Quận / Huyện *</label>
+                            <input type="text" name="districtName" value={newAddressForm.districtName} onChange={handleNewAddressChange} className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-[#AF140B] focus:border-[#AF140B]" placeholder="Quận 1" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">Phường / Xã *</label>
+                          <input type="text" name="wardName" value={newAddressForm.wardName} onChange={handleNewAddressChange} className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-[#AF140B] focus:border-[#AF140B]" placeholder="Phường Bến Nghé" />
+                        </div>
+                        
+                        <div className="flex gap-2 mt-4">
+                          <button type="button" onClick={submitNewAddress} disabled={addressSaving} className="bg-[#AF140B] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#8D0F08] flex items-center gap-2">
+                            {addressSaving ? <Loader2 className="size-4 animate-spin" /> : null} Lưu Địa Chỉ
+                          </button>
+                          {addresses.length > 0 && (
+                            <button type="button" onClick={() => setAddingAddress(false)} disabled={addressSaving} className="px-4 py-2 border-2 border-gray-200 bg-white rounded-lg font-bold hover:bg-gray-100 text-gray-600">
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -534,7 +576,7 @@ export default function Checkout() {
 
                 <button
                   type="submit"
-                  disabled={isPlacingOrder || loadingAddresses}
+                  disabled={isPlacingOrder || loadingAddresses || !selectedAddressId}
                   className="w-full mt-6 bg-[#AF140B] text-white py-4 rounded-xl hover:bg-[#8D0F08] transition-all shadow-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isPlacingOrder ? (

@@ -11,9 +11,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import {
     Warehouse, RefreshCw,
     AlertCircle, Search, Package, ChevronLeft, ChevronRight,
-    Truck, Loader2, ArrowRight, CheckCircle, MapPin, Clock,
+    Truck, Loader2, ArrowRight, CheckCircle, MapPin, Clock, Plus,
 } from 'lucide-react';
 import { inventoryApi, InventoryItem, StoreAvailability } from '../../services/inventoryApi';
+import { skuApi, SkuItem } from '../../services/skuApi';
 import api from '../../services/api';
 
 
@@ -21,7 +22,7 @@ import api from '../../services/api';
 function SkeletonRow() {
     return (
         <tr className="animate-pulse">
-            {Array.from({ length: 3 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
                 <td key={i} className="px-4 py-3">
                     <div className="h-4 bg-gray-200 rounded w-4/5" />
                 </td>
@@ -71,11 +72,7 @@ export default function InventoryManagementPage() {
 
     useEffect(() => { if (storeId) fetchInventory(); }, [storeId]);
 
-    const knownColumns: { key: keyof InventoryItem | 'productName'; label: string }[] = [
-        { key: 'skuCode', label: 'SKU Code' },
-        { key: 'productName', label: 'Tên sản phẩm' },
-        { key: 'quantity', label: 'Số lượng' },
-    ];
+    const COLUMN_COUNT = 6;
 
     const filtered = items.filter((item) => {
         const q = search.toLowerCase();
@@ -199,6 +196,56 @@ export default function InventoryManagementPage() {
         setSearchError(null);
     };
 
+    // ========================
+    // TAB 3: Import Stock State
+    // ========================
+    const [allSkus, setAllSkus] = useState<SkuItem[]>([]);
+    const [allSkusLoading, setAllSkusLoading] = useState(false);
+    const [importSkuId, setImportSkuId] = useState('');
+    const [importQty, setImportQty] = useState('');
+    const [importSubmitting, setImportSubmitting] = useState(false);
+    const [importSuccess, setImportSuccess] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
+
+    const fetchAllSkus = async () => {
+        setAllSkusLoading(true);
+        try {
+            const skus = await skuApi.getAll();
+            setAllSkus(skus);
+        } catch (err) {
+            console.error('Failed to fetch SKUs', err);
+        } finally {
+            setAllSkusLoading(false);
+        }
+    };
+
+    const handleImportStock = async () => {
+        const skuId = parseInt(importSkuId, 10);
+        const qty = parseInt(importQty, 10);
+        if (isNaN(skuId) || isNaN(qty) || qty <= 0) {
+            setImportError('Vui lòng chọn SKU và nhập số lượng hợp lệ.');
+            return;
+        }
+        setImportSubmitting(true);
+        setImportError(null);
+        try {
+            await inventoryApi.importStock(skuId, qty);
+            setImportSuccess(true);
+            fetchInventory(); // refresh inventory tab
+        } catch (err: unknown) {
+            setImportError(err instanceof Error ? err.message : 'Nhập hàng thất bại.');
+        } finally {
+            setImportSubmitting(false);
+        }
+    };
+
+    const handleImportReset = () => {
+        setImportSuccess(false);
+        setImportSkuId('');
+        setImportQty('');
+        setImportError(null);
+    };
+
     return (
         <div className="min-h-full bg-white">
 
@@ -244,6 +291,10 @@ export default function InventoryManagementPage() {
                         <TabsTrigger value="inventory" className="flex-1 !border-2 !border-gray-600 !bg-gray-600 !text-white data-[state=active]:!border-[#AF140B] data-[state=active]:!bg-[#AF140B] data-[state=active]:!text-white data-[state=active]:!shadow-lg !rounded-xl text-sm !font-semibold !py-3 !px-4 transition-all">
                             <Warehouse className="w-4 h-4 mr-2" />
                             Kiểm tra tồn kho
+                        </TabsTrigger>
+                        <TabsTrigger value="import" onClick={() => { if (allSkus.length === 0) fetchAllSkus(); }} className="flex-1 !border-2 !border-gray-600 !bg-gray-600 !text-white data-[state=active]:!border-green-600 data-[state=active]:!bg-green-600 data-[state=active]:!text-white data-[state=active]:!shadow-lg !rounded-xl text-sm !font-semibold !py-3 !px-4 transition-all">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Nhập hàng
                         </TabsTrigger>
                         <TabsTrigger value="transfer" className="flex-1 !border-2 !border-gray-600 !bg-gray-600 !text-white data-[state=active]:!border-blue-600 data-[state=active]:!bg-blue-600 data-[state=active]:!text-white data-[state=active]:!shadow-lg !rounded-xl text-sm !font-semibold !py-3 !px-4 transition-all">
                             <Truck className="w-4 h-4 mr-2" />
@@ -315,11 +366,12 @@ export default function InventoryManagementPage() {
                                     <table className="w-full text-sm">
                                         <thead className="bg-gray-50 border-b">
                                             <tr>
-                                                {knownColumns.map((col) => (
-                                                    <th key={String(col.key)} className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">
-                                                        {col.label}
-                                                    </th>
-                                                ))}
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">SKU Code</th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Tên sản phẩm</th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Màu sắc</th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Kích cỡ</th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Loại</th>
+                                                <th className="px-4 py-3 text-center font-semibold text-gray-600 whitespace-nowrap">Số lượng</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -329,7 +381,7 @@ export default function InventoryManagementPage() {
 
                                             {!loading && paged.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={knownColumns.length} className="py-16 text-center text-gray-400">
+                                                    <td colSpan={COLUMN_COUNT} className="py-16 text-center text-gray-400">
                                                         <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
                                                         {items.length === 0
                                                             ? 'Chưa có dữ liệu tồn kho.'
@@ -344,6 +396,16 @@ export default function InventoryManagementPage() {
                                                         <Badge variant="outline" className="font-mono text-xs">{item.skuCode}</Badge>
                                                     </td>
                                                     <td className="px-4 py-3 font-medium text-[#2C2C2C]">{item.productName || '—'}</td>
+                                                    <td className="px-4 py-3">
+                                                        {item.color ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: item.color.toLowerCase() }} />
+                                                                {item.color}
+                                                            </div>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3">{item.size || '—'}</td>
+                                                    <td className="px-4 py-3">{item.type || '—'}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={`font-bold text-base ${item.quantity === 0 ? 'text-red-600' : item.quantity <= 5 ? 'text-yellow-600' : 'text-green-700'}`}>
                                                             {item.quantity}
@@ -395,6 +457,92 @@ export default function InventoryManagementPage() {
                         </Card>
                     </TabsContent>
 
+                    {/* ========== TAB 2: IMPORT STOCK ========== */}
+                    <TabsContent value="import" className="mt-4 space-y-6">
+
+                        {/* Success */}
+                        {importSuccess && (
+                            <Card className="border-green-300 bg-green-50 shadow-md">
+                                <CardContent className="p-6 flex items-start gap-4">
+                                    <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-green-800 mb-2">Nhập hàng thành công!</h3>
+                                        <p className="text-sm text-green-700">
+                                            Đã thêm <strong>{importQty}</strong> sản phẩm cho SKU <strong>#{importSkuId}</strong> vào kho của bạn.
+                                        </p>
+                                        <Button onClick={handleImportReset} className="mt-4 bg-green-600 hover:bg-green-700">
+                                            <Plus className="w-4 h-4 mr-2" />Nhập thêm
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {!importSuccess && (
+                            <Card className="border border-gray-200 shadow-sm bg-white">
+                                <CardHeader>
+                                    <CardTitle className="text-lg text-[#2C2C2C] flex items-center gap-2">
+                                        <span className="w-6 h-6 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">+</span>
+                                        Nhập hàng vào kho
+                                    </CardTitle>
+                                    <CardDescription>Chọn SKU và nhập số lượng để tăng tồn kho tại cửa hàng của bạn</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* SKU Selector */}
+                                        <div>
+                                            <Label className="mb-1 block">Sản phẩm (SKU) <span className="text-[#AF140B]">*</span></Label>
+                                            <Select
+                                                value={importSkuId}
+                                                onValueChange={(val: string) => { setImportSkuId(val); setImportError(null); }}
+                                                disabled={allSkusLoading}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={allSkusLoading ? 'Đang tải...' : 'Chọn SKU'} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {allSkus.map(sku => (
+                                                        <SelectItem key={sku.id} value={String(sku.id)}>
+                                                            [{sku.skuCode}] {sku.productName} {sku.color ? `- ${sku.color}` : ''} {sku.size ? `(${sku.size})` : ''} {sku.type ? `· ${sku.type}` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Quantity */}
+                                        <div>
+                                            <Label className="mb-1 block">Số lượng nhập <span className="text-[#AF140B]">*</span></Label>
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                placeholder="VD: 50"
+                                                value={importQty}
+                                                onChange={(e) => setImportQty(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {importError && (
+                                        <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <AlertCircle className="w-4 h-4 flex-shrink-0" />{importError}
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        onClick={handleImportStock}
+                                        disabled={importSubmitting || !importSkuId || !importQty}
+                                        className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                                    >
+                                        {importSubmitting
+                                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang nhập...</>
+                                            : <><Plus className="w-4 h-4 mr-2" />Nhập hàng</>}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+
                     {/* ========== TAB 2: STOCK TRANSFER ========== */}
                     <TabsContent value="transfer" className="mt-4 space-y-6">
 
@@ -438,7 +586,7 @@ export default function InventoryManagementPage() {
                                                 <Label htmlFor="sku" className="mb-1 block">Sản phẩm</Label>
                                                 <Select
                                                     value={skuInput}
-                                                    onValueChange={(val) => { setSkuInput(val); setSearchError(null); }}
+                                                    onValueChange={(val: string) => { setSkuInput(val); setSearchError(null); }}
                                                     disabled={loadingSkus || storeSkus.length === 0}
                                                 >
                                                     <SelectTrigger id="sku" className="w-full">

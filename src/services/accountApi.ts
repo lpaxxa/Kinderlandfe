@@ -47,7 +47,7 @@ export const accountApi = {
     },
 
     addAddress: async (data: AddressRequest): Promise<any> => {
-        return await api.post('/api/v1/address/add', data);
+        return await api.post('/api/v1/address/create', data);
     },
 
     deleteAddress: async (addressId: number): Promise<any> => {
