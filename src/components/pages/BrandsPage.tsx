@@ -51,7 +51,7 @@ export default function BrandsPage() {
         const data = response.data;
         const brandsData = Array.isArray(data)
           ? data
-          : data.data;
+          : data.content || data.data || [];
 
         setBrands(brandsData || []);
       } catch (error) {
@@ -81,7 +81,7 @@ export default function BrandsPage() {
         const data = response.data;
         const productsData = Array.isArray(data)
           ? data
-          : data.data;
+          : data.content || data.data?.content || data.data || [];
 
         const mappedProducts = productsData.map((item: any) => {
           const discount = item.promotion?.discountPercent || 0;

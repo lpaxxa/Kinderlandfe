@@ -53,7 +53,6 @@ export default function Navbar() {
     { name: 'Danh mục', path: '/categories', icon: Grid, color: 'from-[#AF140B] to-[#8D0F08]' },
     { name: 'Thương hiệu', path: '/brands', icon: Award, color: 'from-[#D91810] to-[#AF140B]' },
     { name: 'Khuyến mãi', path: '/discounts', icon: Percent, color: 'from-[#AF140B] to-[#8D0F08]' },
-    { name: 'Hàng mới', path: '/new-arrivals', icon: Sparkles, color: 'from-[#D91810] to-[#AF140B]' },
     { name: 'Cửa hàng', path: '/stores', icon: MapPin, color: 'from-[#AF140B] to-[#8D0F08]' },
     { name: 'Blog', path: '/blog', icon: BookOpen, color: 'from-[#D91810] to-[#AF140B]' },
   ];

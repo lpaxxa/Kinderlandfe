@@ -47,7 +47,7 @@ export default function CategoriesPage() {
         const response = await api.get("/api/v1/categories");
 
         const data = response.data;
-        const categoriesData = Array.isArray(data) ? data : data.data;
+        const categoriesData = Array.isArray(data) ? data : data.content || data.data || [];
 
         setCategories(categoriesData || []);
       } catch (error) {
@@ -71,11 +71,11 @@ export default function CategoriesPage() {
         setProductsLoading(true);
 
         const response = await api.get(
-          `/api/v1/products?category=${categoryName}`
+          `/api/v1/products/browse`, { params: { categoryName, page: 0, size: 100 } }
         );
 
         const data = response.data;
-        const productsData = Array.isArray(data) ? data : data.data;
+        const productsData = Array.isArray(data) ? data : data.content || data.data?.content || data.data || [];
 
         const mappedProducts = productsData.map((item: any) => {
           const discount = item.promotion?.discountPercent || 0;
