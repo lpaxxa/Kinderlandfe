@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -12,10 +12,34 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { stores } from '../../data/stores';
 import { products } from '../../data/products';
+import { financialApi } from '../../services/financialApi';
+
+// Format currency
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 export default function AdminDashboard() {
   const { adminUser } = useAdmin();
   const navigate = useNavigate();
+
+  const [realRevenue, setRealRevenue] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchFinancial = async () => {
+      try {
+        const data = await financialApi.getFinancialOverview();
+        setRealRevenue(data.thisMonthRevenue);
+      } catch (err) {
+        console.error("Failed to load financial overview:", err);
+      }
+    };
+    fetchFinancial();
+  }, []);
 
   // Calculate inventory alerts
   const getInventoryAlerts = () => {
@@ -54,7 +78,7 @@ export default function AdminDashboard() {
   // Mock statistics
   const stats = {
     revenue: {
-      value: '2.4 tỷ',
+      value: realRevenue !== null ? formatCurrency(realRevenue) : 'Đang tải...',
       change: 12.5,
       trend: 'up' as const,
       label: 'Doanh thu tháng này',
