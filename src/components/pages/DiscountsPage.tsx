@@ -16,10 +16,10 @@ export default function DiscountsPage() {
       try {
         setLoading(true);
 
-        const response = await api.get("/api/v1/products");
+        const response = await api.get("/api/v1/products", { params: { page: 0, size: 100 } });
         const data = response.data;
 
-        const productsData = Array.isArray(data) ? data : data.data;
+        const productsData = Array.isArray(data) ? data : data.content || data.data?.content || data.data || [];
 
         const mappedProducts = productsData.map((item) => {
           const discount = item.promotion?.discountPercent || 0;
