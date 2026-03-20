@@ -1,8 +1,6 @@
 // Store API Service
 // Vite proxy forward /api/* → http://localhost:8080/api/*
 
-import { authenticatedFetch } from "./api";
-
 const API_BASE_URL = "";
 
 // --- Helper: get token ---
@@ -14,20 +12,6 @@ const getAuthHeaders = (): HeadersInit => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 };
-
-// --- Types for create/update store ---
-export interface StorePayload {
-    name: string;
-    code: string;
-    address: string;
-    phone: string;
-    managerName: string;
-    latitude: number;
-    longitude: number;
-    openingTime: string;
-    closingTime: string;
-    active?: boolean;
-}
 
 // --- Types (khớp chính xác với BE response) ---
 
@@ -165,81 +149,6 @@ export const storeApi = {
                 headers: getAuthHeaders(),
             }
         );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: { data: StoreItem } = await response.json();
-        return json.data;
-    },
-
-    /**
-     * Tạo cửa hàng mới (Admin)
-     * POST /api/v1/stores
-     */
-    createStore: async (payload: StorePayload): Promise<StoreItem> => {
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/stores`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: { data: StoreItem } = await response.json();
-        return json.data;
-    },
-
-    /**
-     * Cập nhật thông tin cửa hàng (Admin)
-     * PUT /api/v1/stores/{id}
-     */
-    updateStore: async (id: number | string, payload: Partial<StorePayload>): Promise<StoreItem> => {
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/stores/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: { data: StoreItem } = await response.json();
-        return json.data;
-    },
-
-    /**
-     * Xóa cửa hàng (Admin)
-     * DELETE /api/v1/stores/{id}
-     */
-    deleteStore: async (id: number | string): Promise<void> => {
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/stores/${id}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-    },
-
-    /**
-     * Toggle trạng thái hoạt động của cửa hàng (Admin)
-     * PATCH /api/v1/stores/{id}/toggle-status
-     */
-    toggleStoreStatus: async (id: number | string): Promise<StoreItem> => {
-        const response = await authenticatedFetch(`${API_BASE_URL}/api/v1/stores/${id}/toggle-status`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-        });
 
         if (!response.ok) {
             const errorText = await response.text();

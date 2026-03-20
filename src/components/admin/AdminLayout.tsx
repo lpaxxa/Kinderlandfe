@@ -39,14 +39,6 @@ export default function AdminLayout() {
       ]
     },
     {
-      section: 'Vận hành',
-      items: [
-        { title: 'Quản lý Cửa hàng', icon: Store, path: '/admin/stores' },
-        { title: 'Quản lý Đơn hàng', icon: ShoppingCart, path: '/admin/orders' },
-        { title: 'Quản lý Hoàn trả', icon: ClipboardList, path: '/admin/returns' },
-      ]
-    },
-    {
       section: 'Tài khoản',
       items: [
         { title: 'Quản lý Tài khoản', icon: Users, path: '/admin/users' },
