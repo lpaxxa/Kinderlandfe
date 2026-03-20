@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState, useEffect } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+>>>>>>> 5760d309298dc1d2e8cb142e354f345a7dbcff28
 import { useNavigate } from 'react-router';
 import { useAdmin } from '../../context/AdminContext';
 import {
@@ -7,6 +11,22 @@ import {
   Store, FileText, Star, Gift, Archive,
   TrendingUp, AlertCircle, RefreshCw,
 } from 'lucide-react';
+<<<<<<< HEAD
+=======
+import { toast } from 'sonner@2.0.3';
+import { stores } from '../../data/stores';
+import { products } from '../../data/products';
+import { financialApi } from '../../services/financialApi';
+
+// Format currency
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+>>>>>>> 5760d309298dc1d2e8cb142e354f345a7dbcff28
 
 import { financialApi } from '../../services/financialApi';
 import { productApi } from '../../services/productApi';
@@ -106,6 +126,7 @@ export default function AdminDashboard() {
   const { adminUser } = useAdmin();
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -156,6 +177,108 @@ export default function AdminDashboard() {
       setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
     } finally {
       setLoading(false);
+=======
+  const [realRevenue, setRealRevenue] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchFinancial = async () => {
+      try {
+        const data = await financialApi.getFinancialOverview();
+        setRealRevenue(data.thisMonthRevenue);
+      } catch (err) {
+        console.error("Failed to load financial overview:", err);
+      }
+    };
+    fetchFinancial();
+  }, []);
+
+  // Calculate inventory alerts
+  const getInventoryAlerts = () => {
+    const alerts: Array<{ type: 'low' | 'excess'; store: string; product: string; qty: number; storeId: string }> = [];
+    
+    stores.forEach((store) => {
+      Object.entries(store.inventory).forEach(([productId, qty]) => {
+        if (qty <= 5 && qty > 0) {
+          const product = products.find((p) => p.id === productId);
+          alerts.push({
+            type: 'low',
+            store: store.name,
+            product: product?.name || 'Unknown',
+            qty,
+            storeId: store.id,
+          });
+        } else if (qty >= 25) {
+          const product = products.find((p) => p.id === productId);
+          alerts.push({
+            type: 'excess',
+            store: store.name,
+            product: product?.name || 'Unknown',
+            qty,
+            storeId: store.id,
+          });
+        }
+      });
+    });
+    
+    return alerts;
+  };
+
+  const inventoryAlerts = getInventoryAlerts();
+  const lowStockAlerts = inventoryAlerts.filter((a) => a.type === 'low');
+
+  // Mock statistics
+  const stats = {
+    revenue: {
+      value: realRevenue !== null ? formatCurrency(realRevenue) : 'Đang tải...',
+      change: 12.5,
+      trend: 'up' as const,
+      label: 'Doanh thu tháng này',
+    },
+    orders: {
+      value: '1,234',
+      change: 8.2,
+      trend: 'up' as const,
+      label: 'Đơn hàng',
+    },
+    customers: {
+      value: '5,678',
+      change: 15.3,
+      trend: 'up' as const,
+      label: 'Khách hàng',
+    },
+    products: {
+      value: products.length.toString(),
+      change: -2.1,
+      trend: 'down' as const,
+      label: 'Sản phẩm',
+    },
+  };
+
+  const recentOrders = [
+    { id: 'ORD-1234', customer: 'Nguyễn Văn A', total: '1.250.000đ', status: 'Đang giao', time: '10 phút trước' },
+    { id: 'ORD-1233', customer: 'Trần Thị B', total: '890.000đ', status: 'Đã xác nhận', time: '25 phút trước' },
+    { id: 'ORD-1232', customer: 'Lê Văn C', total: '2.100.000đ', status: 'Đang xử lý', time: '1 giờ trước' },
+    { id: 'ORD-1231', customer: 'Phạm Thị D', total: '450.000đ', status: 'Hoàn thành', time: '2 giờ trước' },
+  ];
+
+  const pendingReturns = [
+    { id: 'RET-101', order: 'ORD-1220', customer: 'Hoàng Văn E', reason: 'Sản phẩm lỗi', time: '1 giờ trước' },
+    { id: 'RET-102', order: 'ORD-1215', customer: 'Vũ Thị F', reason: 'Giao sai hàng', time: '3 giờ trước' },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Đang giao':
+        return 'bg-blue-100 text-blue-700';
+      case 'Đã xác nhận':
+        return 'bg-green-100 text-green-700';
+      case 'Đang xử lý':
+        return 'bg-amber-100 text-amber-700';
+      case 'Hoàn thành':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+>>>>>>> 5760d309298dc1d2e8cb142e354f345a7dbcff28
     }
   };
 

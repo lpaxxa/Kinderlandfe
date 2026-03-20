@@ -6,10 +6,15 @@ import { useApp } from "../../context/AppContext";
 import api from "../../services/api";
 
 export default function Wishlist() {
-  const { setWishlistItems: setGlobalWishlistItems } = useApp();
+  const { user, wishlistItems, setWishlistItems: setGlobalWishlistItems, removeWishlistItemGlobal } = useApp();
   const [wishlist, setWishlist] = useState<any[]>([]);
 
   const fetchWishlist = async () => {
+    if (!user) {
+      // Guest: use wishlist from context (backed by localStorage)
+      setWishlist(wishlistItems);
+      return;
+    }
     try {
       const res = await api.get("/api/v1/wishlist");
 
@@ -36,9 +41,22 @@ export default function Wishlist() {
 
   useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [user]);
+
+  // Keep local state in sync with context for guests
+  useEffect(() => {
+    if (!user) {
+      setWishlist(wishlistItems);
+    }
+  }, [wishlistItems, user]);
 
   const handleRemove = async (id: number) => {
+    if (!user) {
+      // Guest: remove from context (which persists to localStorage)
+      removeWishlistItemGlobal(id);
+      toast.success("Đã xóa khỏi danh sách yêu thích");
+      return;
+    }
     try {
       const res = await api.removeWishlist(id);
 
@@ -128,7 +146,7 @@ export default function Wishlist() {
             {wishlist.map((item: any) => (
 
               <div
-                key={item.wishlistItemId || item.id}
+                key={item.wishlistItemId || item.productId || item.id}
                 className="group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
 
@@ -137,7 +155,7 @@ export default function Wishlist() {
                   <div className="aspect-square bg-gradient-to-br from-red-50 to-white overflow-hidden">
 
                     <img
-                      src={item.productImageUrl || item.imageUrl}
+                      src={item.productImageUrl || item.imageUrl || item.image}
                       alt={item.productName || item.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
@@ -161,7 +179,7 @@ export default function Wishlist() {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    handleRemove(item.wishlistItemId || item.id);
+                    handleRemove(user ? (item.wishlistItemId || item.id) : (item.productId || item.id));
                   }}
                   className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full text-gray-500 hover:text-red-500 hover:bg-red-50 hover:scale-110 shadow-sm transition-all"
                 >

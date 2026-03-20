@@ -33,6 +33,9 @@ export interface InventoryItem {
     skuId: number;
     skuCode: string;
     productName: string;
+    color: string;
+    size: string;
+    type: string;
     quantity: number;
     storeId: number;
     storeName: string;
@@ -109,6 +112,23 @@ export const inventoryApi = {
 
         const json: InventoryListResponse = await response.json();
         return json.data;
+    },
+
+    /**
+     * Nhập hàng – tăng số lượng tồn kho cho SKU
+     * POST /api/v1/inventory/import — @RequestBody { skuId, quantity }
+     */
+    importStock: async (skuId: number, quantity: number): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/inventory/import`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ skuId, quantity }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP error! status: ${response.status}`);
+        }
     },
 
     /**

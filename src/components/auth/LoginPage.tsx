@@ -84,9 +84,14 @@ export default function LoginPage() {
         loginAdmin({ id: userEmail, email: userEmail, name: userEmail, role: "staff" });
         navigate("/staff/dashboard");
       } else {
-        // CUSTOMER
+        // CUSTOMER — decode JWT to get real account ID
+        let accountId = data.id || "1";
+        try {
+          const jwtPayload = JSON.parse(atob(accessToken.split('.')[1]));
+          accountId = jwtPayload.sub || jwtPayload.id || jwtPayload.accountId || accountId;
+        } catch { /* fallback to data.id */ }
         setUser({
-          id: data.id || "1",
+          id: String(accountId),
           email: userEmail,
           username: data.username || userEmail.split("@")[0],
           firstName: data.firstName || "",
@@ -154,8 +159,14 @@ export default function LoginPage() {
         loginAdmin({ id: email, email, name: email, role: "staff" });
         navigate("/staff/dashboard");
       } else {
+        // Decode JWT to get real account ID
+        let accountId = data.id || "1";
+        try {
+          const jwtPayload = JSON.parse(atob(accessToken.split('.')[1]));
+          accountId = jwtPayload.sub || jwtPayload.id || jwtPayload.accountId || accountId;
+        } catch { /* fallback */ }
         setUser({
-          id: data.id || "1",
+          id: String(accountId),
           email: email,
           username: data.username || email.split("@")[0],
           firstName: data.firstName || "",
@@ -199,8 +210,14 @@ export default function LoginPage() {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
+      // Decode JWT to get real account ID
+      let accountId = data.id || "1";
+      try {
+        const jwtPayload = JSON.parse(atob(accessToken.split('.')[1]));
+        accountId = jwtPayload.sub || jwtPayload.id || jwtPayload.accountId || accountId;
+      } catch { /* fallback */ }
       setUser({
-        id: data.id || "1",
+        id: String(accountId),
         email: userEmail,
         username: data.username || userEmail.split("@")[0],
         firstName: data.firstName || "",

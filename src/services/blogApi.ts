@@ -1,9 +1,7 @@
 // Blog API Service
-// Vite proxy forward /api/* → http://localhost:8080/api/*
+// Uses api.get/post/put/delete (same pattern as productApi.ts)
 
-import { authenticatedFetch } from './api';
-
-const API_BASE_URL = "";
+import api from './api';
 
 // --- Types ---
 
@@ -23,31 +21,6 @@ export interface BlogItem {
     timeRead: number;
 }
 
-export interface BlogListResponse {
-    timestamp: string;
-    statusCode: number;
-    apiPath: string;
-    message: string;
-    data: {
-        content?: BlogItem[];
-        items?: BlogItem[];
-        totalElements?: number;
-        totalPages?: number;
-        size?: number;
-        number?: number;
-    } | BlogItem[];
-    success: boolean;
-}
-
-export interface BlogDetailResponse {
-    timestamp: string;
-    statusCode: number;
-    apiPath: string;
-    message: string;
-    data: BlogItem;
-    success: boolean;
-}
-
 export interface AdminBlogPageResponse {
     content: BlogItem[];
     totalElements: number;
@@ -61,41 +34,35 @@ export interface AdminBlogPageResponse {
 export interface CreateBlogPayload {
     title: string;
     content: string;
-    categoryName: string;  // hoặc categoryId: number nếu BE yêu cầu
+    categoryId: number;
     imageUrl?: string;
     timeRead?: number;
-    status?: boolean;      // true = published, false = draft
+    status?: boolean;
 }
+
+// Helper to normalize blog list responses
+const normalizeBlogs = (res: any): BlogItem[] => {
+    if (Array.isArray(res)) return res;
+    if (res?.data && Array.isArray(res.data)) return res.data;
+    if (res?.data?.content && Array.isArray(res.data.content)) return res.data.content;
+    if (res?.content && Array.isArray(res.content)) return res.content;
+    return [];
+};
 
 // --- API ---
 
 export const blogApi = {
     /**
-     * [PUBLIC] Lấy danh sách blogs cho user
+     * [PUBLIC] Get published blogs
      * GET /api/v1/blogs?page=0&size=20
      */
     getBlogs: async (page = 0, size = 20): Promise<BlogItem[]> => {
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs?page=${page}&size=${size}`,
-            { method: "GET", headers: { "Content-Type": "application/json", Accept: "*/*" } }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: BlogListResponse = await response.json();
-
-        const raw = json.data;
-        if (Array.isArray(raw)) return raw;
-        if (raw && Array.isArray((raw as any).content)) return (raw as any).content;
-        if (raw && Array.isArray((raw as any).items)) return (raw as any).items;
-        return [];
+        const res = await api.get(`/api/v1/blogs?page=${page}&size=${size}`);
+        return normalizeBlogs(res);
     },
 
     /**
-     * [ADMIN] Lấy danh sách blogs cho admin (có token)
+     * [ADMIN] Get all blogs (paginated, with search)
      * GET /api/v1/blogs/admin?page=0&size=20&keyword=...
      */
     getAdminBlogs: async (params?: {
@@ -108,20 +75,8 @@ export const blogApi = {
         q.set('size', String(params?.size ?? 20));
         if (params?.keyword) q.set('keyword', params.keyword);
 
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs/admin?${q}`,
-            { method: "GET", headers: { "Content-Type": "application/json", Accept: "*/*" } }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json = await response.json();
-
-        // Normalize: data có thể là paged object hoặc nằm trong json.data
-        const raw = json.data ?? json;
+        const res = await api.get(`/api/v1/blogs/admin?${q}`);
+        const raw = res?.data ?? res;
         return {
             content: raw.content ?? raw.items ?? [],
             totalElements: raw.totalElements ?? 0,
@@ -134,87 +89,38 @@ export const blogApi = {
     },
 
     /**
-     * Lấy chi tiết một blog theo ID
+     * Get blog by ID
      * GET /api/v1/blogs/{id}
      */
     getBlogById: async (id: number | string): Promise<BlogItem> => {
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs/${id}`,
-            { method: "GET", headers: { "Content-Type": "application/json", Accept: "*/*" } }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json: BlogDetailResponse = await response.json();
-        return json.data;
+        const res = await api.get(`/api/v1/blogs/${id}`);
+        return res?.data ?? res;
     },
 
     /**
-     * [ADMIN] Tạo bài viết mới
+     * [ADMIN] Create a new blog post
      * POST /api/v1/blogs
      */
     createBlog: async (payload: CreateBlogPayload): Promise<BlogItem> => {
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Accept: "*/*" },
-                body: JSON.stringify(payload),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json = await response.json();
-        return json.data as BlogItem;
+        const res = await api.post('/api/v1/blogs', payload);
+        return res?.data ?? res;
     },
 
     /**
-     * [ADMIN] Cập nhật bài viết
+     * [ADMIN] Update a blog post
      * PUT /api/v1/blogs/{id}
      */
     updateBlog: async (id: number, payload: CreateBlogPayload): Promise<BlogItem> => {
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs/${id}`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", Accept: "*/*" },
-                body: JSON.stringify(payload),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
-
-        const json = await response.json();
-        return json.data as BlogItem;
+        const res = await api.put(`/api/v1/blogs/${id}`, payload);
+        return res?.data ?? res;
     },
 
     /**
-     * [ADMIN] Xoá bài viết
+     * [ADMIN] Delete a blog post
      * DELETE /api/v1/blogs/{id}
      */
     deleteBlog: async (id: number): Promise<void> => {
-        const response = await authenticatedFetch(
-            `${API_BASE_URL}/api/v1/blogs/${id}`,
-            {
-                method: "DELETE",
-                headers: { Accept: "*/*" },
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error! status: ${response.status}`);
-        }
+        await api.delete(`/api/v1/blogs/${id}`);
     },
 };
 

@@ -29,6 +29,15 @@ export const financialApi = {
         const response: FinancialOverviewResponse = await api.get('/api/v1/financial/overview');
         return response.data;
     },
+
+    /**
+     * Lấy danh thu theo khoảng ngày
+     * GET /api/v1/financial/revenue?start={start}&end={end}
+     */
+    getRevenueByDateRange: async (start: string, end: string): Promise<number> => {
+        const response = await api.get(`/api/v1/financial/revenue?start=${start}&end=${end}`);
+        return response.data;
+    }
 };
 
 export default financialApi;

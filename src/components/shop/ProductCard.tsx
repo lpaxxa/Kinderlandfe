@@ -10,7 +10,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, featured = false }: ProductCardProps) {
-  const { wishlistItems, setWishlistItems } = useApp();
+  const { user, wishlistItems, setWishlistItems, addWishlistItemGlobal, removeWishlistItemGlobal } = useApp();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -63,26 +63,26 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
 
             try {
               if (isLiked) {
-                // Remove from wishlist
-                const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
-                const response = await api.removeWishlist(targetId);
-                const items = response.data?.items || response.items || response.data || [];
-                if (Array.isArray(items)) setWishlistItems(items);
-                
-                toast.success("Đã xóa khỏi yêu thích", {
-                  description: product.name,
-                  duration: 2000,
-                });
+                // ── REMOVE from wishlist ──
+                if (user && localStorage.getItem('accessToken')) {
+                  const targetId = wishlistItem.wishlistItemId || wishlistItem.id;
+                  const response = await api.removeWishlist(targetId);
+                  const items = response.data?.items || response.items || response.data || [];
+                  if (Array.isArray(items)) setWishlistItems(items);
+                } else {
+                  removeWishlistItemGlobal(productId);
+                }
+                toast.success("Đã xóa khỏi yêu thích");
               } else {
-                // Add to wishlist
-                const response = await api.addWishlist(productId);
-                const items = response.data?.items || response.items || response.data || [];
-                if (Array.isArray(items)) setWishlistItems(items);
-
-                toast.success("❤️ Đã thêm vào yêu thích", {
-                  description: product.name,
-                  duration: 2000,
-                });
+                // ── ADD to wishlist ──
+                if (user && localStorage.getItem('accessToken')) {
+                  const response = await api.addWishlist(productId);
+                  const items = response.data?.items || response.items || response.data || [];
+                  if (Array.isArray(items)) setWishlistItems(items);
+                } else {
+                  addWishlistItemGlobal({ productId, name: product.name, image: product.image, price: product.price });
+                }
+                toast.success("❤️ Đã thêm vào yêu thích");
               }
             } catch (error: any) {
               const errorMsg = error.message || "";

@@ -50,7 +50,6 @@ export default function EnhancedAdminDashboard() {
       items: [
         { title: 'Quản lý Khuyến mãi', icon: Megaphone, path: '/admin/promotions' },
         { title: 'Quản lý Blog', icon: FileText, path: '/admin/blog' },
-        { title: 'Quản lý Chính sách', icon: Shield, path: '/admin/policies' },
         { title: 'Quản lý Đánh giá', icon: MessageSquare, path: '/admin/reviews' },
       ]
     },

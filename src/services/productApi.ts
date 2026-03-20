@@ -6,6 +6,8 @@ export interface Product {
     id: number;
     name: string;
     description: string;
+    ageRange: string;
+    gender: string;
     minPrice: number;
     imageUrl: string;
     categoryName: string;
@@ -21,6 +23,8 @@ export interface ProductPayload {
     brandId: number;
     name: string;
     description: string;
+    ageRange?: string;
+    gender?: string;
     imageUrl: string;
 }
 

@@ -34,7 +34,11 @@ import AdminCategoryController from './components/admin/AdminCategoryController'
 import AdminBrandManagement from './components/admin/AdminBrandManagement';
 import AdminReviewManagement from './components/admin/AdminReviewManagement';
 import AdminBlogManagement from './components/admin/AdminBlogManagement';
+<<<<<<< HEAD
 import AdminStoreManagement from './components/admin/AdminStoreManagement';
+=======
+import AdminFinancial from './components/admin/AdminFinancial';
+>>>>>>> 5760d309298dc1d2e8cb142e354f345a7dbcff28
 import StaffDashboard from './components/staff/StaffDashboard';
 import QRScanner from './components/staff/QRScanner';
 import InventoryCheck from './components/staff/InventoryCheck';
@@ -57,6 +61,7 @@ import ManagerReturnPage from './components/manager/ManagerReturnPage';
 // Customer Account
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import OrderHistory from './components/customer/OrderHistory';
+import ReturnRequestPage from './components/customer/ReturnRequestPage';
 import CustomerProfile from './components/customer/CustomerProfile';
 import LoyaltyPoints from './components/customer/LoyaltyPoints';
 import Wishlist from './components/pages/Wishlist';
@@ -123,10 +128,13 @@ function AppContent() {
             <Route path="reviews" element={<AdminReviewManagement />} />
             <Route path="returns" element={<ReturnManagement />} />
             <Route path="blog" element={<AdminBlogManagement />} />
+<<<<<<< HEAD
             <Route path="stores" element={<AdminStoreManagement />} />
             <Route path="policies" element={<ProductManagement />} />
+=======
+>>>>>>> 5760d309298dc1d2e8cb142e354f345a7dbcff28
             <Route path="reports" element={<AdminDashboard />} />
-            <Route path="financial" element={<AdminDashboard />} />
+            <Route path="financial" element={<AdminFinancial />} />
             <Route path="inventory" element={<ProductManagement />} />
           </Route>
 
@@ -281,11 +289,19 @@ function AppContent() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
+                    <Route
                     path="/account/orders"
                     element={
                       <ProtectedRoute>
                         <OrderHistory />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account/return-request"
+                    element={
+                      <ProtectedRoute>
+                        <ReturnRequestPage />
                       </ProtectedRoute>
                     }
                   />
@@ -307,11 +323,7 @@ function AppContent() {
                   />
                   <Route
                     path="/account/wishlist"
-                    element={
-                      <ProtectedRoute>
-                        <Wishlist />
-                      </ProtectedRoute>
-                    }
+                    element={<Wishlist />}
                   />
                 </Routes>
                 <Footer />
@@ -324,11 +336,14 @@ function AppContent() {
   );
 }
 
+import { Toaster } from 'sonner';
+
 export default function App() {
   return (
     <AppProvider>
       <AdminProvider>
         <AppContent />
+        <Toaster position="bottom-right" richColors closeButton icons={{ success: ' ', error: ' ', info: ' ', warning: ' ' }} />
       </AdminProvider>
     </AppProvider>
   );

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, authenticatedFetch } from './api';
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -29,38 +29,54 @@ export interface AddReviewPayload {
 
 export const reviewApi = {
     /**
-     * GET /api/reviews/product/{productId}
-     * Lấy danh sách đánh giá theo sản phẩm
+     * GET /api/v1/reviews/sku/{skuId}
+     * Get all reviews for a specific SKU
      */
-    getByProduct: async (productId: number): Promise<Review[]> => {
-        const response = await api.get(`/api/reviews/product/${productId}`);
-        // supports { data: [...] } or [...] directly
+    getBySku: async (skuId: number): Promise<Review[]> => {
+        const response = await api.get(`/api/v1/reviews/sku/${skuId}`);
         return Array.isArray(response) ? response : (response?.data ?? []);
     },
 
     /**
-     * POST /api/reviews/add/{productId}
-     * Gửi đánh giá mới (yêu cầu đã mua hàng)
+     * GET /api/v1/reviews/product/{productId}
+     * Get all reviews across all SKUs for a product
      */
-    addReview: async (productId: number, payload: AddReviewPayload): Promise<Review> => {
+    getByProduct: async (productId: number): Promise<Review[]> => {
+        const response = await api.get(`/api/v1/reviews/product/${productId}`);
+        return Array.isArray(response) ? response : (response?.data ?? []);
+    },
+
+    /**
+     * POST /api/v1/reviews/sku/{skuId}
+     * Submit a new review for a specific SKU (requires purchase + CUSTOMER role)
+     */
+    addReview: async (skuId: number, payload: AddReviewPayload): Promise<Review> => {
         const params = new URLSearchParams({
             rating: payload.rating.toString(),
             comment: payload.comment,
         });
-        const response = await api.post(`/api/reviews/add/${productId}?${params.toString()}`, null);
-        return response?.data ?? response;
+        const response = await authenticatedFetch(`/api/v1/reviews/sku/${skuId}?${params.toString()}`, {
+            method: 'POST',
+        });
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('addReview failed:', response.status, errBody);
+            throw new Error(errBody || `HTTP error! status: ${response.status}`);
+        }
+        const res = await response.json();
+        return res?.data ?? res;
     },
 
     /**
-     * PUT /api/reviews/edit/{reviewId}
-     * Chỉnh sửa đánh giá đã gửi
+     * PUT /api/v1/reviews/{reviewId}
+     * Edit an existing review (CUSTOMER role, must be review owner)
      */
     edit: async (reviewId: number, payload: ReviewUpdatePayload): Promise<Review> => {
         const params = new URLSearchParams({
             rating: payload.rating.toString(),
             comment: payload.comment,
         });
-        const response = await api.put(`/api/reviews/edit/${reviewId}?${params.toString()}`, null);
+        const response = await api.put(`/api/v1/reviews/${reviewId}?${params.toString()}`, null);
         return response?.data ?? response;
     },
 
