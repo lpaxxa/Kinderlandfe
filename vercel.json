@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/:path*",
-            "destination": "http://54.169.226.79:8080/api/:path*"
+            "destination": "https://kinderland.website/api/:path*"
         },
         {
             "source": "/((?!assets/).*)",
