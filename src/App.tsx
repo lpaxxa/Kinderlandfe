@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider, useAdmin } from './context/AdminContext';
 import Navbar from './components/layout/Navbar';
+import TopMarquee from './components/layout/TopMarquee';
 import Footer from './components/layout/Footer';
 import HomePage from './components/home/HomePage';
 import LoginPage from './components/auth/LoginPage';
@@ -228,7 +229,10 @@ function AppContent() {
             path="/*"
             element={
               <>
-                <Navbar />
+                <div className="sticky top-0 z-50">
+                  <TopMarquee />
+                  <Navbar />
+                </div>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/products" element={<ProductsPage />} />

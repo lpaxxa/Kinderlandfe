@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { Heart, ShoppingCart, User, LogOut, Search, Menu, X, Home, Percent, Grid, Package, Sparkles, BookOpen, Award, MapPin, UserCircle } from 'lucide-react';
+import { Heart, ShoppingCart, User, LogOut, Search, Menu, X, Home, Percent, Grid, Package, BookOpen, Award, MapPin, UserCircle, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import CartDropdown from './CartDropdown';
+import ProductMegaMenu from './ProductMegaMenu';
 import { Logo } from '../common/Logo';
 import {
   DropdownMenu,
@@ -14,13 +15,29 @@ import {
 } from '../ui/dropdown-menu';
 
 export default function Navbar() {
-  const { user, logout, cart, wishlistCount } = useApp();
+  const { user, logout, cart, wishlistCount, cartDropdownOpen, setCartDropdownOpen } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCartDropdown, setShowCartDropdown] = useState(false);
+
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showMegaMenu, setShowMegaMenu] = useState(false);
+  const megaMenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openMegaMenu = () => {
+    if (megaMenuTimeout.current) {
+      clearTimeout(megaMenuTimeout.current);
+      megaMenuTimeout.current = null;
+    }
+    setShowMegaMenu(true);
+  };
+
+  const closeMegaMenuDelayed = () => {
+    megaMenuTimeout.current = setTimeout(() => {
+      setShowMegaMenu(false);
+    }, 150);
+  };
 
   // Detect scroll
   useEffect(() => {
@@ -50,7 +67,6 @@ export default function Navbar() {
   const menuItems = [
     { name: 'Trang chủ', path: '/', icon: Home, color: 'from-[#AF140B] to-[#8D0F08]' },
     { name: 'Sản phẩm', path: '/products', icon: Package, color: 'from-[#D91810] to-[#AF140B]' },
-    { name: 'Danh mục', path: '/categories', icon: Grid, color: 'from-[#AF140B] to-[#8D0F08]' },
     { name: 'Thương hiệu', path: '/brands', icon: Award, color: 'from-[#D91810] to-[#AF140B]' },
     { name: 'Khuyến mãi', path: '/discounts', icon: Percent, color: 'from-[#AF140B] to-[#8D0F08]' },
     { name: 'Cửa hàng', path: '/stores', icon: MapPin, color: 'from-[#AF140B] to-[#8D0F08]' },
@@ -65,10 +81,10 @@ export default function Navbar() {
   return (
     <>
       {/* Header - Logo, Search, Cart, User */}
-      <header className={`bg-[#AF140B] border-b border-white/20 sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
+      <header className={`bg-[#AF140B] border-b border-white/20 transition-all duration-300 ${isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
         }`}>
         <div className="container mx-auto px-4">
-          <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${isScrolled ? 'py-3' : 'py-4'
+          <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${isScrolled ? 'py-1.5' : 'py-2'
             }`}>
             {/* Logo */}
             <Link to="/" className="flex-shrink-0">
@@ -79,27 +95,27 @@ export default function Navbar() {
             {/* Search Bar - Desktop */}
             <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl">
               <div className="relative w-full">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-white/70" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-white/70" />
                 <input
                   type="text"
                   placeholder="Tìm kiếm đồ chơi..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-white/30 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all bg-white/10 text-white placeholder:text-white/60"
+                  className="w-full pl-10 pr-4 py-2 text-sm border-2 border-white/30 rounded-xl focus:ring-2 focus:ring-white focus:border-white transition-all bg-white/10 text-white placeholder:text-white/60"
                 />
               </div>
             </form>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <div className="relative">
                 <Link
                   to="/account/wishlist"
-                  className="relative p-3 hover:bg-white/10 rounded-xl transition-all block"
+                  className="relative p-2 hover:bg-white/10 rounded-lg transition-all block"
                 >
-                  <Heart className="size-6 text-white" />
+                  <Heart className="size-5 text-white" />
                   {wishlistCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-white text-[#AF140B] text-xs rounded-full size-6 flex items-center justify-center font-bold shadow-lg">
+                    <span className="absolute -top-0.5 -right-0.5 bg-white text-[#AF140B] text-[10px] rounded-full size-4 flex items-center justify-center font-bold shadow-lg">
                       {wishlistCount}
                     </span>
                   )}
@@ -108,23 +124,23 @@ export default function Navbar() {
               {/* Cart */}
               <div
                 className="relative"
-                onMouseEnter={() => setShowCartDropdown(true)}
-                onMouseLeave={() => setShowCartDropdown(false)}
+                onMouseEnter={() => setCartDropdownOpen(true)}
+                onMouseLeave={() => setCartDropdownOpen(false)}
               >
                 <Link
                   to="/cart"
-                  className="relative p-3 hover:bg-white/10 rounded-xl transition-all"
+                  className="relative p-2 hover:bg-white/10 rounded-lg transition-all"
                 >
-                  <ShoppingCart className="size-6 text-white" />
+                  <ShoppingCart className="size-5 text-white" />
                   {cartItemsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-white text-[#AF140B] text-xs rounded-full size-6 flex items-center justify-center font-bold shadow-lg">
+                    <span className="absolute -top-0.5 -right-0.5 bg-white text-[#AF140B] text-[10px] rounded-full size-4 flex items-center justify-center font-bold shadow-lg">
                       {cartItemsCount}
                     </span>
                   )}
                 </Link>
 
                 {/* Cart Dropdown */}
-                {showCartDropdown && <CartDropdown />}
+                {cartDropdownOpen && <CartDropdown />}
               </div>
 
               {/* User Account */}
@@ -132,9 +148,9 @@ export default function Navbar() {
                 <div className="hidden md:block">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl hover:bg-white/90 transition-all shadow-md">
-                        <User className="size-5 text-[#AF140B]" />
-                        <span className="text-sm font-semibold text-[#4A4A4A]">{user.username || user.name}</span>
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg hover:bg-white/90 transition-all shadow-md">
+                        <User className="size-4 text-[#AF140B]" />
+                        <span className="text-xs font-semibold text-[#4A4A4A]">{user.username || user.name}</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
@@ -175,7 +191,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   to="/login"
-                  className="hidden md:flex px-6 py-2.5 bg-white text-[#AF140B] rounded-xl hover:bg-white/90 transition-all shadow-md font-bold"
+                  className="hidden md:flex px-4 py-1.5 bg-white text-[#AF140B] rounded-lg hover:bg-white/90 transition-all shadow-md font-bold text-sm"
                 >
                   Đăng Nhập
                 </Link>
@@ -186,52 +202,83 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="lg:hidden p-2 hover:bg-white/10 rounded-lg text-white"
               >
-                {isMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+                {isMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
               </button>
             </div>
           </div>
 
           {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="lg:hidden pb-4">
+          <form onSubmit={handleSearch} className="lg:hidden pb-2">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-white/70" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-white/70" />
               <input
                 type="text"
                 placeholder="Tìm kiếm đồ chơi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-white/30 rounded-xl focus:ring-2 focus:ring-white focus:border-white transition-all bg-white/10 text-white placeholder:text-white/60"
+                className="w-full pl-10 pr-4 py-2 text-sm border-2 border-white/30 rounded-xl focus:ring-2 focus:ring-white focus:border-white transition-all bg-white/10 text-white placeholder:text-white/60"
               />
             </div>
           </form>
         </div>
       </header>
 
-      {/* Navigation Menu - Icon on top, text below */}
-      <nav className="bg-white shadow-lg sticky top-[88px] z-40 border-b-2 border-[#AF140B]/10">
+      {/* Navigation Menu - Compact text bar */}
+      <nav className="bg-white shadow-sm border-b border-gray-200 relative">
         <div className="container mx-auto px-4">
           {/* Desktop Menu */}
-          <div className="hidden lg:flex items-center justify-center gap-1 py-3">
+          <div className="hidden lg:flex items-center justify-center gap-0">
             {menuItems.map((item) => {
-              const Icon = item.icon;
               const active = isActive(item.path);
+
+              // Special handling for "Sản phẩm"
+              if (item.path === '/products') {
+                return (
+                  <div
+                    key={item.path}
+                    className="relative"
+                    onMouseEnter={openMegaMenu}
+                    onMouseLeave={closeMegaMenuDelayed}
+                  >
+                    <Link
+                      to={item.path}
+                      className={`inline-flex items-center gap-1 px-5 py-2.5 text-sm font-bold transition-all border-b-2 ${active
+                        ? 'text-[#AF140B] border-[#AF140B]'
+                        : 'text-gray-700 border-transparent hover:text-[#AF140B] hover:border-[#AF140B]/30'
+                        }`}
+                    >
+                      {item.name}
+                      <ChevronDown className={`size-3.5 transition-transform ${showMegaMenu ? 'rotate-180' : ''}`} />
+                    </Link>
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex flex-col items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold transition-all min-w-[110px] ${active
-                    ? 'bg-[#AF140B] text-white shadow-lg transform scale-105'
-                    : 'text-[#4A4A4A] hover:bg-[#FFE5E3] hover:scale-105'
+                  className={`px-5 py-2.5 text-sm font-bold transition-all border-b-2 ${active
+                    ? 'text-[#AF140B] border-[#AF140B]'
+                    : 'text-gray-700 border-transparent hover:text-[#AF140B] hover:border-[#AF140B]/30'
                     }`}
                 >
-                  <div className={`p-2.5 rounded-xl ${active ? 'bg-white/30 shadow-lg' : 'bg-[#FFE5E3]'}`}>
-                    <Icon className={`size-6 ${active ? 'text-white' : 'text-[#AF140B]'}`} />
-                  </div>
-                  <span className="text-xs font-bold tracking-wide">{item.name}</span>
+                  {item.name}
                 </Link>
               );
             })}
           </div>
+
+          {/* Mega Menu */}
+          {showMegaMenu && (
+            <div
+              className="absolute left-0 right-0 top-full z-[100]"
+              onMouseEnter={openMegaMenu}
+              onMouseLeave={closeMegaMenuDelayed}
+            >
+              <ProductMegaMenu onClose={() => setShowMegaMenu(false)} />
+            </div>
+          )}
         </div>
       </nav>
 

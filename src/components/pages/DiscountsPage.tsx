@@ -99,18 +99,18 @@ export default function DiscountsPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-16">
+      <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-5">
         <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-3 bg-white/20 px-6 py-3 rounded-full mb-4 backdrop-blur-sm">
-            <Percent className="size-6" />
-            <span className="font-bold text-lg">
+          <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full mb-2 backdrop-blur-sm">
+            <Percent className="size-4" />
+            <span className="font-bold text-sm">
               KHUYẾN MÃI ĐẶC BIỆT
             </span>
           </div>
-          <h1 className="text-5xl font-bold mb-4">
+          <h1 className="text-2xl font-bold mb-1">
             Giảm Giá Khủng
           </h1>
-          <p className="text-xl text-white/90">
+          <p className="text-sm text-white/90">
             Tiết kiệm tối đa với các ưu đãi hấp dẫn
           </p>
         </div>

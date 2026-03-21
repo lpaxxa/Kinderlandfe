@@ -32,8 +32,10 @@ export default function HomePage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  const featuredProducts = products.slice(0, 6);
-  const newArrivals = products.slice(6, 10);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const [newArrivalsLoading, setNewArrivalsLoading] = useState(true);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const featuredBlogs = blogs.slice(0, 3);
 
   const formatPrice = (price: number) => {
@@ -54,6 +56,8 @@ export default function HomePage() {
   useEffect(() => {
     // fetchBrands();
     fetchCategories();
+    fetchNewArrivals();
+    fetchFeaturedProducts();
   }, []);
 
   // const fetchBrands = async () => {
@@ -81,6 +85,68 @@ export default function HomePage() {
       console.error("Fetch categories error:", error);
     } finally {
       setCategoriesLoading(false);
+    }
+  };
+
+  const fetchNewArrivals = async () => {
+    try {
+      setNewArrivalsLoading(true);
+      const res = await api.get("/api/v1/products", { params: { page: 0, size: 6, sort: "createdDate,desc" } });
+      const data = res.data;
+      const productsData = Array.isArray(data) ? data : data.content || data.data?.content || data.data || [];
+      const mapped = productsData.slice(0, 6).map((item: any) => {
+        const discount = item.promotion?.discountPercent || 0;
+        const originalPrice = item.minPrice;
+        const price = discount > 0 ? originalPrice - (originalPrice * discount) / 100 : originalPrice;
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price,
+          originalPrice: discount > 0 ? originalPrice : null,
+          category: item.categoryName,
+          brand: item.brandName,
+          image: item.imageUrl,
+          rating: item.averageRating || 0,
+          reviewCount: item.reviewCount || 0,
+        };
+      });
+      setNewArrivals(mapped);
+    } catch (error) {
+      console.error("Fetch new arrivals error:", error);
+    } finally {
+      setNewArrivalsLoading(false);
+    }
+  };
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      setFeaturedLoading(true);
+      const res = await api.get("/api/v1/products", { params: { page: 0, size: 6 } });
+      const data = res.data;
+      const productsData = Array.isArray(data) ? data : data.content || data.data?.content || data.data || [];
+      const mapped = productsData.slice(0, 6).map((item: any) => {
+        const discount = item.promotion?.discountPercent || 0;
+        const originalPrice = item.minPrice;
+        const price = discount > 0 ? originalPrice - (originalPrice * discount) / 100 : originalPrice;
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price,
+          originalPrice: discount > 0 ? originalPrice : null,
+          category: item.categoryName,
+          brand: item.brandName,
+          image: item.imageUrl,
+          rating: item.averageRating || 0,
+          reviewCount: item.reviewCount || 0,
+        };
+      });
+      setFeaturedProducts(mapped);
+    } catch (error) {
+      console.error("Fetch featured products error:", error);
+    } finally {
+      setFeaturedLoading(false);
     }
   };
 
@@ -149,11 +215,15 @@ export default function HomePage() {
               <ArrowRight className="size-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {featuredLoading ? (
+            <div className="text-center py-10 text-gray-500">Đang tải sản phẩm...</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -162,55 +232,28 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <TrendingUp className="size-8 text-[#AF140B]" />
-              <h2 className="text-3xl font-bold text-[#4A4A4A]">
+              <TrendingUp className="size-6 text-[#AF140B]" />
+              <h2 className="text-2xl font-bold text-[#4A4A4A]">
                 Hàng Mới Về
               </h2>
             </div>
             <Link
-              to="/new-arrivals"
-              className="text-[#AF140B] font-semibold hover:text-[#8D0F08] flex items-center gap-2"
+              to="/products"
+              className="text-[#AF140B] font-semibold hover:text-[#8D0F08] flex items-center gap-2 text-sm"
             >
               Xem tất cả
               <ArrowRight className="size-4" />
             </Link>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {newArrivals.map((product) => (
-              <Link
-                key={product.id}
-                to={`/product/${product.id}`}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all group overflow-hidden border-2 border-gray-200 hover:border-[#AF140B]"
-              >
-                <div className="relative">
-                  <div className="aspect-square bg-gray-50 overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="absolute top-3 right-3 bg-[#AF140B] text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                    MỚI
-                  </div>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs text-[#AF140B] font-semibold mb-1">
-                    {product.category}
-                  </p>
-                  <h3 className="font-bold text-[#4A4A4A] mb-2 line-clamp-2 min-h-[3rem]">
-                    {product.name}
-                  </h3>
-                  <p className="text-[#AF140B] font-bold text-xl mb-2">
-                    {formatPrice(product.price)}
-                  </p>
-                  <div className="text-sm text-gray-500">
-                    Còn {product.stock} sản phẩm
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {newArrivalsLoading ? (
+            <div className="text-center py-10 text-gray-500">Đang tải sản phẩm mới...</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {newArrivals.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
