@@ -123,36 +123,36 @@ export default function StoreFinderPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-16">
+      <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-5">
         <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-3 bg-white/20 px-6 py-3 rounded-full mb-4 backdrop-blur-sm">
-            <MapPin className="size-6" />
-            <span className="font-bold text-lg">HỆ THỐNG CỬA HÀNG</span>
+          <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full mb-2 backdrop-blur-sm">
+            <MapPin className="size-4" />
+            <span className="font-bold text-sm">HỆ THỐNG CỬA HÀNG</span>
           </div>
-          <h1 className="text-5xl font-bold mb-4">
+          <h1 className="text-2xl font-bold mb-1">
             Tìm Cửa Hàng Kinderland
           </h1>
-          <p className="text-xl text-white/90">
+          <p className="text-sm text-white/90">
             {storeList.length} cửa hàng trên toàn quốc
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-3 gap-5">
           {/* Left Sidebar - Store List */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-4">
+            <div className="bg-white rounded-xl shadow-md p-4 sticky top-4">
 
               {/* City Selector */}
-              <div className="mb-4">
-                <label className="block text-sm font-bold text-gray-800 mb-2">
+              <div className="mb-3">
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
                   Chọn thành phố:
                 </label>
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#AF140B] focus:border-[#AF140B] font-semibold text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#AF140B]/20 focus:border-[#AF140B] font-medium text-gray-700"
                 >
                   <option value="">Tất cả</option>
                   {cities.map((city) => (
@@ -164,11 +164,11 @@ export default function StoreFinderPage() {
               </div>
 
               {/* Nearby Button */}
-              <div className="mb-4">
+              <div className="mb-3">
                 <button
                   onClick={handleFindNearby}
                   disabled={nearbyLoading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#AF140B] text-white rounded-xl font-semibold hover:bg-[#8D0F08] transition-all disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#AF140B] text-white rounded-lg text-sm font-semibold hover:bg-[#8D0F08] transition-all disabled:opacity-60"
                 >
                   {nearbyLoading ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -212,39 +212,39 @@ export default function StoreFinderPage() {
               )}
 
               {/* Search */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="relative">
                   {searchLoading ? (
-                    <Loader2 className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-[#AF140B] animate-spin" />
+                    <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-[#AF140B] animate-spin" />
                   ) : (
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
                   )}
                   <input
                     type="text"
                     placeholder="Tìm cửa hàng..."
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#AF140B] focus:border-[#AF140B]"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#AF140B]/20 focus:border-[#AF140B]"
                   />
                 </div>
               </div>
 
-              <div className="mb-4 space-y-2">
-                <p className="text-sm text-gray-700 font-semibold">
+              <div className="mb-3">
+                <p className="text-xs text-gray-500 font-medium">
                   <strong>{filteredStores.length}</strong> cửa hàng
                   {selectedCity ? ` tại ${selectedCity}` : " trên toàn quốc"}
                 </p>
               </div>
 
               {/* Store List */}
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {filteredStores.map((store) => {
                   const isExpanded = expandedStoreId === store.id;
                   return (
                     <div
                       key={store.id}
-                      className={`border-2 rounded-xl overflow-hidden transition-all ${selectedStore?.id === store.id
-                        ? "border-[#AF140B] bg-[#FFE5E3]"
+                      className={`border rounded-lg overflow-hidden transition-all ${selectedStore?.id === store.id
+                        ? "border-[#AF140B] bg-[#FFE5E3]/50"
                         : "border-gray-200 hover:border-[#AF140B]/50"
                         }`}
                     >
@@ -253,21 +253,18 @@ export default function StoreFinderPage() {
                           setSelectedStore(store);
                           setExpandedStoreId(isExpanded ? null : store.id);
                         }}
-                        className="w-full p-4 text-left flex items-center justify-between gap-2"
+                        className="w-full p-3 text-left flex items-center justify-between gap-2"
                       >
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-800 line-clamp-1">
+                          <h3 className="font-semibold text-sm text-gray-800 line-clamp-1">
                             {store.name.replace("Kinderland ", "")}
                           </h3>
-                          <p className="text-sm text-gray-600 line-clamp-1">
+                          <p className="text-xs text-gray-500 line-clamp-1">
                             {store.address}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {store.code}
                           </p>
                         </div>
                         <ChevronDown
-                          className={`size-5 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""
+                          className={`size-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""
                             }`}
                         />
                       </button>
@@ -317,9 +314,9 @@ export default function StoreFinderPage() {
           </div>
 
           {/* Right Content - Map & Store Details */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             {/* Map */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="aspect-video relative">
                 {selectedStore ? (
                   <iframe
@@ -345,93 +342,93 @@ export default function StoreFinderPage() {
 
             {/* Store Details Card */}
             {selectedStore && (
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-3xl font-bold text-gray-800">
+              <div className="bg-white rounded-xl shadow-md p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-800">
                     {selectedStore.name}
                   </h2>
                   {selectedStore.active && (
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
-                      ● Đang hoạt động
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                      ● Hoạt động
                     </span>
                   )}
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="size-6 text-[#AF140B] mt-1 flex-shrink-0" />
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="size-4 text-[#AF140B] mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-gray-700 mb-1">Địa chỉ</p>
-                        <p className="text-gray-600">{selectedStore.address}</p>
+                        <p className="text-xs font-bold text-gray-600 mb-0.5">Địa chỉ</p>
+                        <p className="text-sm text-gray-700">{selectedStore.address}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Phone className="size-6 text-[#AF140B] mt-1 flex-shrink-0" />
+                    <div className="flex items-start gap-2">
+                      <Phone className="size-4 text-[#AF140B] mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-gray-700 mb-1">Số điện thoại</p>
+                        <p className="text-xs font-bold text-gray-600 mb-0.5">SĐT</p>
                         <a
                           href={`tel:${selectedStore.phone}`}
-                          className="text-[#AF140B] hover:underline"
+                          className="text-sm text-[#AF140B] hover:underline"
                         >
                           {selectedStore.phone}
                         </a>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Clock className="size-6 text-[#AF140B] mt-1 flex-shrink-0" />
+                    <div className="flex items-start gap-2">
+                      <Clock className="size-4 text-[#AF140B] mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-gray-700 mb-1">Giờ mở cửa</p>
-                        <p className="text-gray-600">
+                        <p className="text-xs font-bold text-gray-600 mb-0.5">Giờ mở cửa</p>
+                        <p className="text-sm text-gray-700">
                           {formatHours(selectedStore.openingTime, selectedStore.closingTime)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <User className="size-6 text-[#AF140B] mt-1 flex-shrink-0" />
+                    <div className="flex items-start gap-2">
+                      <User className="size-4 text-[#AF140B] mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-gray-700 mb-1">Quản lý cửa hàng</p>
-                        <p className="text-gray-600">{selectedStore.managerName}</p>
+                        <p className="text-xs font-bold text-gray-600 mb-0.5">Quản lý</p>
+                        <p className="text-sm text-gray-700">{selectedStore.managerName}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Right side */}
-                  <div className="bg-gradient-to-br from-[#FFE5E3] to-white rounded-xl p-6 flex items-center justify-center">
+                  <div className="bg-gradient-to-br from-[#FFE5E3] to-white rounded-lg p-4 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-6xl mb-4">🏪</div>
-                      <h3 className="font-bold text-gray-800 mb-2">
+                      <div className="text-4xl mb-2">🏪</div>
+                      <h3 className="font-bold text-sm text-gray-800 mb-1">
                         Chào mừng đến Kinderland
                       </h3>
-                      <p className="text-sm text-gray-600">
-                        Hơn 1000+ đồ chơi chất lượng cao
+                      <p className="text-xs text-gray-500">
+                        Hơn 1000+ đồ chơi chất lượng
                       </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Mã cửa hàng: {selectedStore.code}
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Mã: {selectedStore.code}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Additional Features */}
-                <div className="mt-8 pt-6 border-t-2 border-gray-100">
-                  <h3 className="font-bold text-gray-800 mb-4">Dịch vụ tại cửa hàng</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="mt-5 pt-4 border-t border-gray-100">
+                  <h3 className="font-bold text-sm text-gray-800 mb-3">Dịch vụ tại cửa hàng</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { icon: "🎁", label: "Gói quà miễn phí" },
                       { icon: "✅", label: "Đổi trả 30 ngày" },
                       { icon: "🎮", label: "Khu vui chơi" },
-                      { icon: "🅿️", label: "Bãi đỗ xe miễn phí" },
+                      { icon: "🅿️", label: "Bãi đỗ xe" },
                     ].map((item) => (
                       <div
                         key={item.label}
-                        className="text-center p-4 bg-[#FFE5E3] rounded-xl border border-[#AF140B]/20"
+                        className="text-center p-2.5 bg-[#FFE5E3]/50 rounded-lg"
                       >
-                        <div className="text-3xl mb-2">{item.icon}</div>
-                        <p className="text-sm font-semibold text-gray-700">{item.label}</p>
+                        <div className="text-xl mb-1">{item.icon}</div>
+                        <p className="text-xs font-medium text-gray-600">{item.label}</p>
                       </div>
                     ))}
                   </div>

@@ -39,7 +39,7 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
   return (
     <Link
       to={`/product/${product.id}`}
-      className={`group block bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 hover:border-[#AF140B] ${featured ? "transform hover:scale-105" : "hover:-translate-y-1"
+      className={`group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-[#AF140B]/40 ${featured ? "transform hover:scale-105" : "hover:-translate-y-1"
         }`}
     >
       {/* IMAGE */}
@@ -52,7 +52,7 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
 
         {/* Discount badge */}
         {discountPercent > 0 && (
-          <span className="absolute top-3 right-3 bg-[#D91810] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+          <span className="absolute top-2 right-2 bg-[#D91810] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
             -{discountPercent}%
           </span>
         )}
@@ -94,53 +94,53 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
               }
             }
           }}
-          className={`absolute top-3 left-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full hover:bg-[#FFE5E3] hover:scale-110 transition-all shadow-md group`}
+          className={`absolute top-2 left-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-[#FFE5E3] hover:scale-110 transition-all shadow group`}
         >
           <Heart 
-            className={`size-5 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-gray-400 group-hover:text-[#AF140B]"}`} 
+            className={`size-4 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-gray-400 group-hover:text-[#AF140B]"}`} 
           />
         </button>
       </div>
 
       {/* CONTENT */}
-      <div className="p-4 bg-white">
+      <div className="p-3 bg-white">
 
         {/* CATEGORY */}
-        <p className="text-xs text-[#AF140B] font-semibold mb-1 uppercase tracking-wide bg-[#FFE5E3] px-2 py-1 rounded-md inline-block">
+        <p className="text-[10px] text-[#AF140B] font-semibold mb-1 uppercase tracking-wide">
           {product.category}
         </p>
 
         {/* NAME */}
-        <h3 className="font-bold text-[#2C2C2C] mb-2 line-clamp-2 min-h-[2.5rem] group-hover:text-[#AF140B] transition-colors text-[15px]">
+        <h3 className="font-semibold text-[#2C2C2C] mb-1.5 line-clamp-2 min-h-[2.2rem] group-hover:text-[#AF140B] transition-colors text-xs leading-tight">
           {product.name}
         </h3>
 
         {/* RATING */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-1 mb-1.5">
           <div className="flex items-center gap-0.5">
             {[...Array(fullStars)].map((_, i) => (
-              <Star key={i} className="size-4 fill-[#D4AF37] text-[#D4AF37]" />
+              <Star key={i} className="size-3 fill-[#D4AF37] text-[#D4AF37]" />
             ))}
 
             {hasHalfStar && (
               <Star
-                className="size-4 fill-[#D4AF37] text-[#D4AF37]"
+                className="size-3 fill-[#D4AF37] text-[#D4AF37]"
                 style={{ clipPath: "inset(0 50% 0 0)" }}
               />
             )}
           </div>
 
-          <span className="text-xs text-gray-500">({reviewCount})</span>
+          <span className="text-[10px] text-gray-400">({reviewCount})</span>
         </div>
 
         {/* PRICE */}
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-xl font-bold text-[#AF140B]">
+        <div className="flex items-baseline gap-1.5 mb-2">
+          <span className="text-sm font-bold text-[#AF140B]">
             {formatPrice(product.price)}
           </span>
 
           {product.originalPrice && (
-            <span className="text-sm text-gray-400 line-through">
+            <span className="text-[10px] text-gray-400 line-through">
               {formatPrice(product.originalPrice)}
             </span>
           )}
@@ -148,9 +148,9 @@ export default function ProductCard({ product, featured = false }: ProductCardPr
 
         {/* VIEW DETAILS */}
         <div
-          className="w-full bg-[#AF140B] text-white hover:bg-[#8D0F08] py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md hover:shadow-lg"
+          className="w-full bg-[#AF140B] text-white hover:bg-[#8D0F08] py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
-          <Eye className="size-5" />
+          <Eye className="size-3.5" />
           Xem chi tiết
         </div>
       </div>

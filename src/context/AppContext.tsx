@@ -41,6 +41,8 @@ interface AppContextType {
   setWishlistItems: (items: any[]) => void;
   addWishlistItemGlobal: (item: any) => void;
   removeWishlistItemGlobal: (productId: number) => void;
+  cartDropdownOpen: boolean;
+  setCartDropdownOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -72,6 +74,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [cart, setCart] = useState<any[]>([]);
   const [voucher, setVoucher] = useState<Voucher | null>(null);
+  const [cartDropdownOpen, setCartDropdownOpen] = useState(false);
 
   // Wrapper to persist user to localStorage
   const setUser = (newUser: User | null) => {
@@ -354,6 +357,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setWishlistItems,
         addWishlistItemGlobal,
         removeWishlistItemGlobal,
+        cartDropdownOpen,
+        setCartDropdownOpen,
       }}
     >
       {children}

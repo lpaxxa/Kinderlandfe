@@ -24,7 +24,7 @@ export default function ProductActions({
   onQuantityChange,
   onShowStoreModal,
 }: ProductActionsProps) {
-  const { user, addToCart, wishlistItems, setWishlistItems, addWishlistItemGlobal, removeWishlistItemGlobal } = useApp();
+  const { user, addToCart, wishlistItems, setWishlistItems, addWishlistItemGlobal, removeWishlistItemGlobal, setCartDropdownOpen } = useApp();
 
   const productId = product.id && typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
   const wishlistItem = wishlistItems?.find((item: any) => (item.productId || item.id) === productId);
@@ -42,6 +42,8 @@ export default function ProductActions({
       const bestStore = sortedStores[0];
       await addToCart(selectedSku.id, quantity, bestStore.storeId);
       toast.success('✅ Thêm vào giỏ hàng thành công!');
+      setCartDropdownOpen(true);
+      setTimeout(() => setCartDropdownOpen(false), 4000);
     } catch (err: any) {
       toast.error(err.message || "Có lỗi xảy ra, vui lòng thử lại!");
     }
@@ -82,25 +84,25 @@ export default function ProductActions({
   return (
     <>
       {/* Quantity Selector */}
-      <div className="mb-6 mt-4">
-        <label className="block text-sm font-bold text-gray-700 mb-3">Số lượng:</label>
-        <div className="flex items-center gap-4">
+      <div className="mb-4 mt-3">
+        <label className="block text-xs font-bold text-gray-700 mb-2">Số lượng:</label>
+        <div className="flex items-center gap-3">
           <button
             onClick={() => quantity > 1 && onQuantityChange(quantity - 1)}
-            className="p-3 border-2 border-gray-300 rounded-xl hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all"
+            className="p-1.5 border border-gray-300 rounded-lg hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all"
           >
-            <Minus className="size-5" />
+            <Minus className="size-4" />
           </button>
-          <span className="text-2xl font-bold w-16 text-center">{quantity}</span>
+          <span className="text-base font-bold w-10 text-center">{quantity}</span>
           <button
             onClick={() => quantity < currentStock && onQuantityChange(quantity + 1)}
-            className="p-3 border-2 border-gray-300 rounded-xl hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all disabled:opacity-50"
+            className="p-1.5 border border-gray-300 rounded-lg hover:bg-[#AF140B] hover:text-white hover:border-[#AF140B] transition-all disabled:opacity-50"
             disabled={quantity >= currentStock || currentStock === 0}
           >
-            <Plus className="size-5" />
+            <Plus className="size-4" />
           </button>
         </div>
-        <p className="text-sm text-gray-500 mt-2 font-medium">
+        <p className="text-xs text-gray-500 mt-1.5 font-medium">
           {availabilityLoading ? (
             <span className="flex items-center gap-1">
               <Loader2 className="size-3 animate-spin" /> Đang kiểm tra tồn kho...
@@ -115,40 +117,29 @@ export default function ProductActions({
       <button
         onClick={handleAddToCart}
         disabled={currentStock === 0 || availabilityLoading}
-        className="w-full bg-[#AF140B] text-white py-4 rounded-2xl hover:bg-[#8D0F08] transition-all shadow-lg flex items-center justify-center gap-3 font-bold text-lg disabled:opacity-50"
+        className="w-full bg-[#AF140B] text-white py-2.5 rounded-xl hover:bg-[#8D0F08] transition-all shadow-md flex items-center justify-center gap-2 font-bold text-sm disabled:opacity-50"
       >
-        <ShoppingCart className="size-6" />
+        <ShoppingCart className="size-4" />
         {availabilityLoading ? "Đang kiểm tra..." : currentStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
       </button>
 
       {/* Wishlist */}
       <button
         onClick={handleWishlistToggle}
-        className="w-full mt-4 bg-white border-2 border-[#AF140B] text-[#AF140B] py-4 rounded-2xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-3 font-bold text-lg group"
+        className="w-full mt-2 bg-white border border-[#AF140B] text-[#AF140B] py-2.5 rounded-xl hover:bg-[#FFE5E3] transition-all flex items-center justify-center gap-2 font-semibold text-sm group"
       >
-        <Heart className={`size-6 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-[#AF140B] group-hover:fill-[#AF140B]"}`} />
+        <Heart className={`size-4 transition-colors ${isLiked ? "fill-[#AF140B] text-[#AF140B]" : "text-[#AF140B] group-hover:fill-[#AF140B]"}`} />
         {isLiked ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
       </button>
 
       {/* Find in Store */}
       <button
         onClick={onShowStoreModal}
-        className="w-full mt-4 bg-white border-2 border-gray-300 text-gray-700 py-4 rounded-2xl hover:bg-gray-100 transition-all flex items-center justify-center gap-3 font-bold text-lg"
+        className="w-full mt-2 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-semibold text-sm"
       >
-        <MapPin className="size-6" />
+        <MapPin className="size-4" />
         Tìm tại cửa hàng
       </button>
-
-      {/* Policy */}
-      <div className="mt-6 p-5 bg-[#FFE5E3] rounded-2xl border-2 border-[#AF140B]/30">
-        <h3 className="font-bold text-gray-800 mb-3 text-lg">🎯 Chính sách:</h3>
-        <ul className="text-sm text-gray-700 space-y-2">
-          <li className="flex items-center gap-2"><span className="text-[#AF140B]">✓</span><span>Miễn phí vận chuyển đơn từ 500.000đ</span></li>
-          <li className="flex items-center gap-2"><span className="text-[#AF140B]">✓</span><span>Đổi trả trong 7 ngày</span></li>
-          <li className="flex items-center gap-2"><span className="text-[#AF140B]">✓</span><span>Bảo hành chính hãng</span></li>
-          <li className="flex items-center gap-2"><span className="text-[#AF140B]">✓</span><span>Hỗ trợ 24/7</span></li>
-        </ul>
-      </div>
     </>
   );
 }

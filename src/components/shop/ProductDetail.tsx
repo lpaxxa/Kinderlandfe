@@ -10,6 +10,7 @@ import ProductActions from './ProductActions';
 import StoreAvailabilitySection from './StoreAvailabilitySection';
 import StoreAvailabilityModal from './StoreAvailabilityModal';
 import ReviewSection from './ReviewSection';
+import YouMayAlsoLike from './YouMayAlsoLike';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -162,17 +163,10 @@ export default function ProductDetail() {
       </button>
 
       {/* ── Product Hero (Image + Info) ──── */}
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Image */}
-        <div>
-          <div className="bg-gradient-to-br from-[#FFE5E3] to-white rounded-3xl overflow-hidden shadow-xl border border-[#AF140B]/20 p-8">
-            <img
-              src={selectedSku?.imageUrl || product.image}
-              alt={product.name}
-              className="w-full h-full object-cover rounded-2xl"
-            />
-          </div>
-          {/* Thumbnail gallery */}
+      <div className="grid md:grid-cols-[1fr_340px] gap-6">
+        {/* Image gallery – LEGO-style: vertical thumbnails left + main image right */}
+        <div className="flex gap-4">
+          {/* Vertical thumbnail strip */}
           {(() => {
             const allImages: { url: string; label: string }[] = [
               { url: product.image, label: 'Sản phẩm' },
@@ -182,7 +176,7 @@ export default function ProductDetail() {
             ];
             if (allImages.length <= 1) return null;
             return (
-              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+              <div className="flex flex-col gap-2 overflow-y-auto max-h-[500px] pr-1">
                 {allImages.map((img, idx) => (
                   <button
                     key={idx}
@@ -194,54 +188,62 @@ export default function ProductDetail() {
                         if (match) setSelectedSku(match);
                       }
                     }}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${
+                    className={`flex-shrink-0 w-[72px] h-[72px] rounded-lg border-2 overflow-hidden transition-all ${
                       (idx === 0 && !selectedSku?.imageUrl) || selectedSku?.imageUrl === img.url
                         ? 'border-[#AF140B] shadow-md'
                         : 'border-gray-200 hover:border-gray-400'
                     }`}
                   >
-                    <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                    <img src={img.url} alt={img.label} className="w-full h-full object-contain bg-white" />
                   </button>
                 ))}
               </div>
             );
           })()}
+
+          {/* Main image container – fixed height, image always fully visible */}
+          <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center h-[500px] p-6">
+            <img
+              src={selectedSku?.imageUrl || product.image}
+              alt={product.name}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
         </div>
 
         {/* Product Info + Actions */}
-        <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+        <div className="pt-2">
           {/* Category */}
-          <div className="mb-4">
-            <span className="text-sm bg-[#FFE5E3] text-[#AF140B] px-4 py-2 rounded-full font-semibold">
+          <div className="mb-3">
+            <span className="text-xs bg-[#FFE5E3] text-[#AF140B] px-3 py-1.5 rounded-full font-semibold">
               {product.category}
             </span>
           </div>
 
           {/* Name */}
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">{product.name}</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">{product.name}</h1>
 
           {/* Brand */}
-          <div className="mb-4">
-            <span className="text-sm text-gray-600">
+          <div className="mb-3">
+            <span className="text-xs text-gray-500">
               Thương hiệu: <span className="font-bold text-[#AF140B]">{product.brand}</span>
             </span>
           </div>
 
-          {/* Description */}
-          <p className="text-gray-600 mb-6 text-lg leading-relaxed">{product.description}</p>
+
 
           {/* Price */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-4xl font-bold text-[#AF140B]">{formatPrice(currentFinalPrice)}</span>
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl font-bold text-[#AF140B]">{formatPrice(currentFinalPrice)}</span>
               {discountPercent > 0 && (
-                <span className="bg-red-500 text-white px-3 py-1 rounded-full font-bold">
+                <span className="bg-red-500 text-white px-2 py-0.5 rounded-full font-bold text-xs">
                   Giảm {discountPercent}%
                 </span>
               )}
             </div>
             {discountPercent > 0 && (
-              <div className="text-lg text-gray-400 line-through">
+              <div className="text-sm text-gray-400 line-through">
                 Giá gốc: {formatPrice(currentOriginalPrice)}
               </div>
             )}
@@ -288,53 +290,79 @@ export default function ProductDetail() {
         onShowStoreModal={() => setShowStoreModal(true)}
       />
 
-      {/* ── Product Info Tabs ────────────── */}
-      <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 mb-6">
-        <div className="flex border-b border-gray-200 mb-4">
-          <button className="px-6 py-3 text-sm font-bold text-[#AF140B] border-b-2 border-[#AF140B]">
-            Thông tin sản phẩm
-          </button>
-        </div>
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-gray-100">
-            {product.category && (
-              <tr>
-                <td className="py-3 pr-8 text-gray-500 font-medium w-1/3">Danh mục</td>
-                <td className="py-3 text-gray-900">{product.category}</td>
-              </tr>
-            )}
-            {product.brand && (
-              <tr>
-                <td className="py-3 pr-8 text-gray-500 font-medium">Thương hiệu</td>
-                <td className="py-3 text-gray-900">{product.brand}</td>
-              </tr>
-            )}
-            {product.brandOrigin && (
-              <tr>
-                <td className="py-3 pr-8 text-gray-500 font-medium">Xuất xứ thương hiệu</td>
-                <td className="py-3 text-gray-900">{product.brandOrigin}</td>
-              </tr>
-            )}
-            {product.ageRange && (
-              <tr>
-                <td className="py-3 pr-8 text-gray-500 font-medium">Tuổi</td>
-                <td className="py-3 text-gray-900">{product.ageRange}</td>
-              </tr>
-            )}
-            {product.gender && (
-              <tr>
-                <td className="py-3 pr-8 text-gray-500 font-medium">Giới tính</td>
-                <td className="py-3 text-gray-900">{product.gender}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        {product.description && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h4 className="font-bold text-gray-800 mb-2">Mô tả sản phẩm</h4>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{product.description}</p>
+      {/* ── Product Info + Policy side by side ── */}
+      <div className="grid md:grid-cols-[2fr_1fr] gap-6 mb-6">
+        {/* Product Info */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <div className="flex border-b border-gray-200 mb-4">
+            <button className="px-6 py-3 text-sm font-bold text-[#AF140B] border-b-2 border-[#AF140B]">
+              Thông tin sản phẩm
+            </button>
           </div>
-        )}
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-100">
+              {product.category && (
+                <tr>
+                  <td className="py-3 pr-8 text-gray-500 font-medium w-1/3">Danh mục</td>
+                  <td className="py-3 text-gray-900">{product.category}</td>
+                </tr>
+              )}
+              {product.brand && (
+                <tr>
+                  <td className="py-3 pr-8 text-gray-500 font-medium">Thương hiệu</td>
+                  <td className="py-3 text-gray-900">{product.brand}</td>
+                </tr>
+              )}
+              {product.brandOrigin && (
+                <tr>
+                  <td className="py-3 pr-8 text-gray-500 font-medium">Xuất xứ thương hiệu</td>
+                  <td className="py-3 text-gray-900">{product.brandOrigin}</td>
+                </tr>
+              )}
+              {product.ageRange && (
+                <tr>
+                  <td className="py-3 pr-8 text-gray-500 font-medium">Tuổi</td>
+                  <td className="py-3 text-gray-900">{product.ageRange}</td>
+                </tr>
+              )}
+              {product.gender && (
+                <tr>
+                  <td className="py-3 pr-8 text-gray-500 font-medium">Giới tính</td>
+                  <td className="py-3 text-gray-900">{product.gender}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {product.description && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="font-bold text-gray-800 mb-2">Mô tả sản phẩm</h4>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{product.description}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Policy */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 h-fit">
+          <h3 className="font-bold text-gray-800 mb-4 text-base">🎯 Chính sách</h3>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="text-[#AF140B] font-bold mt-0.5">✓</span>
+              <span>Miễn phí vận chuyển đơn từ 500.000đ</span>
+            </li>
+            <li className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="text-[#AF140B] font-bold mt-0.5">✓</span>
+              <span>Đổi trả trong 7 ngày</span>
+            </li>
+            <li className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="text-[#AF140B] font-bold mt-0.5">✓</span>
+              <span>Bảo hành chính hãng</span>
+            </li>
+            <li className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="text-[#AF140B] font-bold mt-0.5">✓</span>
+              <span>Hỗ trợ 24/7</span>
+            </li>
+          </ul>
+        </div>
       </div>
 
       {/* ── Store Modal ────────────────── */}
@@ -347,6 +375,9 @@ export default function ProductDetail() {
 
       {/* ── Reviews ────────────────────── */}
       <ReviewSection productId={Number(id)} selectedSku={selectedSku} />
+
+      {/* ── You May Also Like ────────────── */}
+      <YouMayAlsoLike currentProductId={product.id} />
     </div>
   );
 }
