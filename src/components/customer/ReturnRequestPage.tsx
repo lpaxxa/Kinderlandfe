@@ -309,11 +309,10 @@ export default function ReturnRequestPage() {
             return (
               <div key={s.key} className="flex items-center flex-1">
                 <div className="flex items-center gap-2 flex-1">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all ${
-                    isDone ? 'bg-green-500 text-white' :
-                    isActive ? 'bg-[#AF140B] text-white shadow-lg shadow-[#AF140B]/30' :
-                    'bg-gray-200 text-gray-500'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all ${isDone ? 'bg-green-500 text-white' :
+                      isActive ? 'bg-[#AF140B] text-white shadow-lg shadow-[#AF140B]/30' :
+                        'bg-gray-200 text-gray-500'
+                    }`}>
                     {isDone ? <CheckCircle className="w-4 h-4" /> : s.num}
                   </div>
                   <span className={`text-xs font-bold hidden sm:block ${isActive ? 'text-[#AF140B]' : isDone ? 'text-green-600' : 'text-gray-400'}`}>
@@ -390,9 +389,8 @@ export default function ReturnRequestPage() {
                     return (
                       <label
                         key={item.orderItemId}
-                        className={`flex items-center gap-4 py-4 px-2 border-b border-gray-50 cursor-pointer transition-all rounded-lg ${
-                          isSelected ? 'bg-red-50/50' : 'hover:bg-gray-50'
-                        }`}
+                        className={`flex items-center gap-4 py-4 px-2 border-b border-gray-50 cursor-pointer transition-all rounded-lg ${isSelected ? 'bg-red-50/50' : 'hover:bg-gray-50'
+                          }`}
                       >
                         <input
                           type="checkbox"

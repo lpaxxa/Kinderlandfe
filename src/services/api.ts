@@ -1,6 +1,7 @@
 // API Service utility for making HTTP requests with automatic JWT refresh
-// Vite proxy forward /api/* → http://localhost:8080 (xem vite.config.ts)
-const API_BASE_URL = "";
+// Local dev: VITE_API_BASE_URL is empty, Vite proxy forwards /api/* → localhost:8080
+// Production (Vercel): VITE_API_BASE_URL = "http://<EC2_PUBLIC_IP>:8080"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 // Track refresh token requests to avoid multiple concurrent refreshes
 let isRefreshing = false;
