@@ -5,16 +5,22 @@ interface SkuSelectorProps {
 }
 
 export default function SkuSelector({ skus, selectedSku, onSelectSku }: SkuSelectorProps) {
-  // Extract unique colors
+  // Extract unique values for each variant dimension
   const colors = [...new Set(skus.map((s: any) => s.color).filter(Boolean))];
-  // Extract sizes filtered by selected color
+  const types = [...new Set(skus.map((s: any) => s.type).filter(Boolean))];
+  // Sizes filtered by selected color/type for cascading selection
   const sizes = [...new Set(
     skus
       .filter((s: any) => !selectedSku?.color || s.color === selectedSku.color)
+      .filter((s: any) => !selectedSku?.type || s.type === selectedSku.type)
       .map((s: any) => s.size)
       .filter(Boolean)
   )];
-  const hasVariants = colors.length > 0 || sizes.length > 0;
+
+  const hasAnyVariant = colors.length > 0 || sizes.length > 0 || types.length > 0;
+
+  // If there's nothing to select, render nothing
+  if (!hasAnyVariant && skus.length <= 1) return null;
 
   return (
     <div className="mt-4 space-y-4">
@@ -52,6 +58,35 @@ export default function SkuSelector({ skus, selectedSku, onSelectSku }: SkuSelec
         </div>
       )}
 
+      {/* Type selector */}
+      {types.length > 0 && (
+        <div>
+          <p className="font-semibold mb-2 text-sm text-gray-700">
+            Loại: {selectedSku?.type && <span className="font-bold text-gray-900">{selectedSku.type}</span>}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {types.map((type: any) => {
+              const isSelected = selectedSku?.type === type;
+              const matchingSku = skus.find((s: any) =>
+                s.type === type && (!selectedSku?.color || s.color === selectedSku.color)
+              ) || skus.find((s: any) => s.type === type);
+              return (
+                <button
+                  key={type}
+                  onClick={() => matchingSku && onSelectSku(matchingSku)}
+                  className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold transition-all ${isSelected
+                    ? 'bg-[#AF140B] text-white border-[#AF140B] shadow-md'
+                    : 'bg-white border-gray-200 hover:border-[#AF140B]/40 text-gray-700'
+                    }`}
+                >
+                  {type}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Size selector */}
       {sizes.length > 0 && (
         <div>
@@ -77,27 +112,6 @@ export default function SkuSelector({ skus, selectedSku, onSelectSku }: SkuSelec
                 </button>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* Fallback: no color/size — show single SKU selector */}
-      {!hasVariants && skus.length > 0 && (
-        <div>
-          <p className="font-semibold mb-2 text-sm text-gray-700">Chọn loại:</p>
-          <div className="flex flex-wrap gap-2">
-            {skus.map((sku: any) => (
-              <button
-                key={sku.id}
-                onClick={() => onSelectSku(sku)}
-                className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold transition-all ${selectedSku?.id === sku.id
-                  ? 'bg-[#AF140B] text-white border-[#AF140B]'
-                  : 'bg-white border-gray-200 hover:border-gray-400'
-                  }`}
-              >
-                Loại {sku.id}
-              </button>
-            ))}
           </div>
         </div>
       )}

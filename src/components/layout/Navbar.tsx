@@ -81,7 +81,7 @@ export default function Navbar() {
   return (
     <>
       {/* Header - Logo, Search, Cart, User */}
-      <header className={`bg-[#AF140B] border-b border-white/20 transition-all duration-300 ${isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
+      <header className={`bg-[#AF140B] border-b border-white/20 transition-all duration-300 relative z-50 ${isScrolled ? 'shadow-2xl bg-[#AF140B]/98 backdrop-blur-md' : 'shadow-lg'
         }`}>
         <div className="container mx-auto px-4">
           <div className={`flex items-center justify-between gap-4 transition-all duration-300 ${isScrolled ? 'py-1.5' : 'py-2'
@@ -114,11 +114,6 @@ export default function Navbar() {
                   className="relative p-2 hover:bg-white/10 rounded-lg transition-all block"
                 >
                   <Heart className="size-5 text-white" />
-                  {wishlistCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-white text-[#AF140B] text-[10px] rounded-full size-4 flex items-center justify-center font-bold shadow-lg">
-                      {wishlistCount}
-                    </span>
-                  )}
                 </Link>
               </div>
               {/* Cart */}
@@ -129,12 +124,12 @@ export default function Navbar() {
               >
                 <Link
                   to="/cart"
-                  className="relative p-2 hover:bg-white/10 rounded-lg transition-all"
+                  className="flex items-center gap-0.5 p-2 rounded-lg transition-all"
                 >
                   <ShoppingCart className="size-5 text-white" />
                   {cartItemsCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-white text-[#AF140B] text-[10px] rounded-full size-4 flex items-center justify-center font-bold shadow-lg">
-                      {cartItemsCount}
+                    <span className="text-white text-xs font-medium">
+                      ({cartItemsCount})
                     </span>
                   )}
                 </Link>
@@ -272,7 +267,7 @@ export default function Navbar() {
           {/* Mega Menu */}
           {showMegaMenu && (
             <div
-              className="absolute left-0 right-0 top-full z-[100]"
+              className="absolute left-1/2 -translate-x-1/2 w-2/3 top-full z-[100]"
               onMouseEnter={openMegaMenu}
               onMouseLeave={closeMegaMenuDelayed}
             >

@@ -108,7 +108,7 @@ export const TAB_LIST = [
   { value: 'PENDING_RETURN', label: 'Chờ trả hàng' },
   { value: 'COMPLETED', label: 'Hoàn thành' },
   { value: 'CANCELLED', label: 'Đã hủy' },
-  { value: 'RETURNED', label: 'Đơn đã trả' },
+  { value: 'RETURNED', label: 'Trả hàng' },
 ];
 
 export const RETURN_STATUS_CONFIG: Record<string, { label: string; color: string }> = {

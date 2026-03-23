@@ -3,13 +3,8 @@ const API_BASE_URL = "";
 
 // --- Types ---
 export interface LoyaltyPoints {
-    points: number;
-    tier?: string;
-    lifetimePoints?: number;
-    expiringSoon?: number;
-    expiryDate?: string;
-    pointsToNextTier?: number;
-    [key: string]: unknown;
+    totalPoints: number;
+    lifetimePoints: number;
 }
 
 export interface LoyaltyResponse {

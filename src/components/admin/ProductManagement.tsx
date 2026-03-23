@@ -21,6 +21,8 @@ import {
   PackageX,
   Upload,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { productApi, Product as APIProduct } from '../../services/productApi';
@@ -57,6 +59,10 @@ export default function ProductManagement() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBrand, setFilterBrand] = useState('all');
 
+  // ── Pagination state ──────────────────────────────────────────────────
+  const PRODUCTS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<APIProduct | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
@@ -91,7 +97,8 @@ export default function ProductManagement() {
         categoryApi.getAll(),
         brandApi.getAll(),
       ]);
-      setProductList(prods || []);
+      // Sort by id descending so most recently added products appear first
+      setProductList((prods || []).sort((a: APIProduct, b: APIProduct) => b.id - a.id));
       setCategories(cats || []);
       setBrands(brnds || []);
     } catch (error: any) {
@@ -119,7 +126,7 @@ export default function ProductManagement() {
       setSearchLoading(true);
       try {
         const results = await productApi.search(value);
-        setProductList(results);
+        setProductList(results.sort((a: APIProduct, b: APIProduct) => b.id - a.id));
       } catch {
         // fallback to client-side filter already showing
       } finally {
@@ -134,6 +141,18 @@ export default function ProductManagement() {
     const matchBrand = filterBrand === 'all' || p.brandName === filterBrand;
     return matchCat && matchBrand;
   });
+
+  // ── Pagination logic ──────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters / search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterCategory, filterBrand, productList]);
 
   // ── CRUD handlers ────────────────────────────────────────────────────────
 
@@ -655,7 +674,6 @@ export default function ProductManagement() {
                   <TableHead>Sản phẩm</TableHead>
                   <TableHead>Danh mục</TableHead>
                   <TableHead>Thương hiệu</TableHead>
-                  <TableHead className="text-right">Giá</TableHead>
                   <TableHead className="text-center">Khuyến mãi</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -663,20 +681,20 @@ export default function ProductManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center text-gray-500">
+                    <TableCell colSpan={6} className="h-48 text-center text-gray-500">
                       <Loader2 className="w-8 h-8 mx-auto animate-spin mb-2 text-indigo-500" />
                       Đang tải...
                     </TableCell>
                   </TableRow>
                 ) : filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center text-gray-400">
+                    <TableCell colSpan={6} className="h-48 text-center text-gray-400">
                       <PackageX className="w-10 h-10 mx-auto mb-2" />
                       Không tìm thấy sản phẩm nào
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProducts.map((product) => (
+                  paginatedProducts.map((product) => (
                     <TableRow key={product.id}>
                       {/* Image */}
                       <TableCell>
@@ -705,10 +723,7 @@ export default function ProductManagement() {
                       {/* Brand */}
                       <TableCell className="text-sm">{product.brandName || '—'}</TableCell>
 
-                      {/* Price */}
-                      <TableCell className="text-right font-medium text-indigo-700">
-                        {formatPrice(product.minPrice)}
-                      </TableCell>
+
 
                       {/* Promotion */}
                       <TableCell className="text-center">
@@ -759,6 +774,36 @@ export default function ProductManagement() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls */}
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <div className="flex items-center justify-between border-t pt-4 mt-4 px-2">
+                <p className="text-sm text-gray-500">
+                  Hiển thị {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} / {filteredProducts.length} sản phẩm
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[80px] text-center">
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

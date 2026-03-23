@@ -1,25 +1,55 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Calendar, Clock, User, BookOpen, Loader2 } from "lucide-react";
+import { Loader2, LayoutGrid, List, ChevronDown } from "lucide-react";
 import { blogApi, BlogItem } from "../../services/blogApi";
+import type { BlogCategory } from "../../services/blogCategoryApi";
+
+type ViewMode = "list" | "grid";
 
 export default function BlogListPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [blogList, setBlogList] = useState<BlogItem[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
 
   useEffect(() => {
-    blogApi.getBlogs(0, 50)
-      .then((data) => setBlogList(data))
+    const fetchCategories = async (): Promise<BlogCategory[]> => {
+      try {
+        const res = await fetch('/api/v1/blog-categories', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json', Accept: '*/*' },
+        });
+        if (!res.ok) throw new Error('Failed');
+        const json = await res.json();
+        const raw = json?.data;
+        if (Array.isArray(raw)) return raw;
+        if (raw?.content && Array.isArray(raw.content)) return raw.content;
+        return [];
+      } catch {
+        return [];
+      }
+    };
+
+    Promise.all([
+      blogApi.getBlogs(0, 50),
+      fetchCategories(),
+    ])
+      .then(([blogs, cats]) => {
+        setBlogList(blogs);
+        // If API categories are empty, extract from blog data
+        if (cats.length > 0) {
+          setCategories(cats);
+        } else {
+          const uniqueNames = Array.from(new Set(blogs.map((b) => b.categoryName).filter(Boolean)));
+          setCategories(uniqueNames.map((name, i) => ({ id: i + 1, name })));
+        }
+      })
       .catch((err) => setError(err.message || "Không thể tải bài viết"))
       .finally(() => setLoading(false));
   }, []);
-
-  const categories = [
-    "all",
-    ...Array.from(new Set(blogList.map((b) => b.categoryName))),
-  ];
 
   const filteredBlogs =
     selectedCategory === "all"
@@ -33,6 +63,16 @@ export default function BlogListPage() {
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const toggleCategory = (id: number) => {
+    setExpandedCategory(expandedCategory === id ? null : id);
   };
 
   if (loading) {
@@ -61,143 +101,192 @@ export default function BlogListPage() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-[#AF140B] via-[#D91810] to-[#AF140B] text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-3 bg-white/20 px-6 py-3 rounded-full mb-4 backdrop-blur-sm">
-            <BookOpen className="size-6" />
+    <div className="bg-white min-h-screen">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          {/* ===== Left Sidebar - Categories ===== */}
+          <aside className="hidden md:block w-56 flex-shrink-0">
+            <h2 className="text-sm font-bold text-[#AF140B] mb-3 uppercase tracking-wide">
+              Danh mục bài viết
+            </h2>
+            <div>
+              {categories.map((cat) => {
+                const isExpanded = expandedCategory === cat.id;
+                const isActive = selectedCategory === cat.name;
+                // Get blogs in this category to show count or sub-items
+                const blogsInCat = blogList.filter(b => b.categoryName === cat.name);
 
-            <span className="font-bold text-lg">
-              BLOG KINDERLAND
-            </span>
-          </div>
-          <h1 className="text-5xl font-bold mb-4">
-            Kiến Thức Nuôi Dạy Con
-          </h1>
-          <p className="text-xl text-white/90">
-            Chia sẻ kinh nghiệm và kiến thức hữu ích về đồ chơi
-            và phát triển trẻ em
-          </p>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Category Filter */}
-        <div className="mb-8">
-          <h3 className="font-bold text-gray-800 mb-4">
-            Danh mục:
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-5 py-2.5 rounded-full font-semibold transition-all ${selectedCategory === category
-                  ? "bg-[#AF140B] text-white shadow-lg"
-                  : "bg-white text-gray-700 hover:bg-[#FFE5E3] border border-gray-200"
-                  }`}
-              >
-                {category === "all" ? "Tất cả" : category}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Featured Blog */}
-        {filteredBlogs.length > 0 && (
-          <Link
-            to={`/blog/${filteredBlogs[0].blogId}`}
-            className="block mb-12 group"
-          >
-            <div className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all border-2 border-gray-200 hover:border-[#AF140B]">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="aspect-video md:aspect-auto overflow-hidden">
-                  <img
-                    src={filteredBlogs[0].imageUrl}
-                    alt={filteredBlogs[0].title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-                <div className="p-8 flex flex-col justify-center">
-                  <div className="inline-block bg-gradient-to-r from-[#AF140B] to-[#D91810] text-white px-4 py-2 rounded-full text-sm font-bold mb-4 w-fit">
-                    BÀI VIẾT NỔĨ BẬT
+                return (
+                  <div key={cat.id} className="border-b border-gray-100">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory(isActive ? "all" : cat.name);
+                        toggleCategory(cat.id);
+                      }}
+                      className={`w-full text-left px-1 py-3 text-sm transition-all flex items-center justify-between group
+                        ${isActive ? 'text-[#AF140B] font-bold' : 'text-gray-700 hover:text-[#AF140B]'}`}
+                    >
+                      <span>{cat.name}</span>
+                      {blogsInCat.length > 0 && (
+                        <ChevronDown
+                          className={`size-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      )}
+                    </button>
+                    {/* Expanded sub-items (blog titles) */}
+                    {isExpanded && blogsInCat.length > 0 && (
+                      <div className="pl-3 pb-2 space-y-1">
+                        {blogsInCat.map((blog) => (
+                          <Link
+                            key={blog.blogId}
+                            to={`/blog/${blog.blogId}`}
+                            className="block text-xs text-gray-500 hover:text-[#AF140B] py-1.5 transition-colors"
+                          >
+                            {blog.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-4 group-hover:text-[#AF140B] transition-colors">
-                    {filteredBlogs[0].title}
-                  </h2>
-                  <p className="text-gray-600 mb-6 line-clamp-3">
-                    {filteredBlogs[0].content}
-                  </p>
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <User className="size-4" />
-                      <span>{filteredBlogs[0].authorName}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="size-4" />
-                      <span>
-                        {formatDate(filteredBlogs[0].publishedAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="size-4" />
-                      <span>{filteredBlogs[0].timeRead} phút đọc</span>
-                    </div>
-                  </div>
-                </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* ===== Right Content ===== */}
+          <main className="flex-1 min-w-0">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h1 className="text-xl font-bold text-gray-900">
+                {selectedCategory === "all" ? "Tất Cả Bài Viết" : selectedCategory}
+              </h1>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-1.5 rounded transition-all ${viewMode === "grid"
+                    ? 'text-[#AF140B]'
+                    : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  title="Xem dạng lưới"
+                >
+                  <LayoutGrid className="size-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 rounded transition-all ${viewMode === "list"
+                    ? 'text-[#AF140B]'
+                    : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  title="Xem dạng danh sách"
+                >
+                  <List className="size-5" />
+                </button>
               </div>
             </div>
-          </Link>
-        )}
 
-        {/* Blog Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBlogs.slice(1).map((blog) => (
-            <Link
-              key={blog.blogId}
-              to={`/blog/${blog.blogId}`}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all group border-2 border-gray-200 hover:border-[#AF140B]"
-            >
-              <div className="aspect-video overflow-hidden">
-                <img
-                  src={blog.imageUrl}
-                  alt={blog.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+            {/* Mobile Category Filter */}
+            <div className="md:hidden mb-5 overflow-x-auto">
+              <div className="flex gap-2 pb-2">
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${selectedCategory === "all"
+                    ? "bg-[#AF140B] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                >
+                  Tất cả
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.name)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${selectedCategory === cat.name
+                      ? "bg-[#AF140B] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
               </div>
-              <div className="p-6">
-                <div className="inline-block bg-[#FFE5E3] text-[#AF140B] px-3 py-1 rounded-full text-xs font-semibold mb-3">
-                  {blog.categoryName}
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-[#AF140B] transition-colors">
-                  {blog.title}
-                </h3>
-                <p className="text-gray-600 mb-4 line-clamp-3">
-                  {blog.content}
-                </p>
-                <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <User className="size-4" />
-                    <span>{blog.authorName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="size-4" />
-                    <span>{blog.timeRead} phút đọc</span>
-                  </div>
-                </div>
+            </div>
+
+            {/* Blog Content */}
+            {filteredBlogs.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-gray-400 text-sm">Không tìm thấy bài viết nào</p>
               </div>
-            </Link>
-          ))}
+            ) : viewMode === "list" ? (
+              /* ========= LIST VIEW ========= */
+              <div className="space-y-5">
+                {filteredBlogs.map((blog) => (
+                  <Link
+                    key={blog.blogId}
+                    to={`/blog/${blog.blogId}`}
+                    className="flex bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-64 h-44 flex-shrink-0 overflow-hidden">
+                      <img
+                        src={blog.imageUrl}
+                        alt={blog.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="flex-1 p-4 flex flex-col justify-center min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 mb-1.5 group-hover:text-[#AF140B] transition-colors line-clamp-2">
+                        {blog.title}
+                      </h3>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
+                        <span>{formatDate(blog.publishedAt)}</span>
+                        <span>{blog.authorName}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs line-clamp-3 mb-2">
+                        {stripHtml(blog.content)}
+                      </p>
+                      <span className="text-[#AF140B] font-semibold text-xs">
+                        Xem Thêm
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              /* ========= GRID VIEW ========= */
+              <div className="grid grid-cols-2 gap-5">
+                {filteredBlogs.map((blog) => (
+                  <Link
+                    key={blog.blogId}
+                    to={`/blog/${blog.blogId}`}
+                    className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all group"
+                  >
+                    <div className="aspect-[16/10] overflow-hidden">
+                      <img
+                        src={blog.imageUrl}
+                        alt={blog.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-sm font-bold text-gray-900 mb-1.5 group-hover:text-[#AF140B] transition-colors line-clamp-2">
+                        {blog.title}
+                      </h3>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
+                        <span>{formatDate(blog.publishedAt)}</span>
+                        <span>{blog.authorName}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs line-clamp-2 mb-2">
+                        {stripHtml(blog.content)}
+                      </p>
+                      <span className="text-[#AF140B] font-semibold text-xs">
+                        Xem Thêm
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </main>
         </div>
-
-        {filteredBlogs.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-gray-500 text-lg">
-              Không tìm thấy bài viết nào
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

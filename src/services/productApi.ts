@@ -55,7 +55,7 @@ export const productApi = {
      * Returns all products
      */
     getAll: async (): Promise<Product[]> => {
-        const res = await api.get('/api/v1/products');
+        const res = await api.get('/api/v1/products?size=1000');
         return normalizeProducts(res);
     },
 

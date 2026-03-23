@@ -1,15 +1,39 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
+import { Button } from '../../ui/button';
+import { Printer, Loader2 } from 'lucide-react';
 import { ReturnRequest, RETURN_STATUS_CONFIG, formatPrice } from './orderTypes';
+import { returnApi } from '../../../services/returnApi';
 
 interface ReturnCardProps {
   ret: ReturnRequest;
 }
 
 export default function ReturnCard({ ret }: ReturnCardProps) {
+  const [printing, setPrinting] = useState(false);
+
   const statusCfg = RETURN_STATUS_CONFIG[ret.returnStatus] || {
     label: ret.returnStatus,
     color: 'bg-gray-100 text-gray-800',
+  };
+
+  const canPrintLabel = ret.returnStatus === 'APPROVED';
+
+  const handlePrintLabel = async () => {
+    setPrinting(true);
+    try {
+      const html = await returnApi.getShippingLabel(ret.returnId);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(html);
+        printWindow.document.close();
+      }
+    } catch (err) {
+      console.error('Failed to fetch shipping label:', err);
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
@@ -25,9 +49,27 @@ export default function ReturnCard({ ret }: ReturnCardProps) {
               Đơn hàng #{ret.orderId} · {ret.productName}
             </p>
           </div>
-          <Badge variant="outline" className={`${statusCfg.color} border font-bold px-3 py-1 rounded-full`}>
-            {statusCfg.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {canPrintLabel && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePrintLabel}
+                disabled={printing}
+                className="text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                {printing ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Printer className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                In phiếu gửi hàng
+              </Button>
+            )}
+            <Badge variant="outline" className={`${statusCfg.color} border font-bold px-3 py-1 rounded-full`}>
+              {statusCfg.label}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">

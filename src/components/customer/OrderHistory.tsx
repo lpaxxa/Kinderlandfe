@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
@@ -49,6 +49,7 @@ export default function OrderHistory() {
       } else if (Array.isArray(response)) {
         data = response;
       }
+      data.sort((a, b) => b.orderId - a.orderId);
       setOrders(data);
       setError(null);
       await preCheckReviewedSkus(data);
@@ -128,7 +129,9 @@ export default function OrderHistory() {
     }
   };
 
-  useEffect(() => { fetchOrders(); fetchReturnRequests(); }, []);
+  const locationKey = useLocation().key;
+
+  useEffect(() => { fetchOrders(); fetchReturnRequests(); }, [locationKey]);
   useEffect(() => { setPage(1); }, [selectedTab]);
 
   // ── Handlers ──
@@ -177,12 +180,15 @@ export default function OrderHistory() {
   // ── Filtering ──
 
   const ordersWithReturns = new Set(returnRequests.map((r) => r.orderId));
+  const ordersWithPendingReturns = new Set(
+    returnRequests.filter((r) => r.returnStatus === 'PENDING').map((r) => r.orderId)
+  );
 
   const filterOrders = (status: string) => {
     if (!Array.isArray(orders)) return [];
     if (status === 'RETURNED') return [];
     if (status === 'DELIVERED') return orders.filter((o) => o.orderStatus === 'DELIVERED' && !ordersWithReturns.has(o.orderId));
-    if (status === 'PENDING_RETURN') return orders.filter((o) => o.orderStatus === 'DELIVERED' && ordersWithReturns.has(o.orderId));
+    if (status === 'PENDING_RETURN') return orders.filter((o) => o.orderStatus === 'DELIVERED' && ordersWithPendingReturns.has(o.orderId));
     if (status === 'PENDING') return orders.filter((o) => o.orderStatus === 'PENDING' || o.orderStatus === 'PAID');
     return orders.filter((o) => o.orderStatus === status);
   };
