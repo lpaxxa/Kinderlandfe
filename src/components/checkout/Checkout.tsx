@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { CreditCard, Truck, AlertCircle, Loader2, Plus } from 'lucide-react';
+import { CreditCard, Truck, AlertCircle, Loader2, Plus, Coins } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'sonner';
 import { accountApi, AddressRequest } from '../../services/accountApi';
+import { loyaltyApi } from '../../services/loyaltyApi';
 
 const EMPTY_ADDRESS: AddressRequest = {
   street: '',
@@ -43,6 +44,11 @@ export default function Checkout() {
   const [voucherError, setVoucherError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'BANK' | 'CARD'>('COD');
 
+  // Loyalty points state
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(true);
+
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
@@ -71,6 +77,22 @@ export default function Checkout() {
     } else {
       setLoadingAddresses(false);
     }
+  }, [user]);
+
+  // Fetch loyalty points
+  useEffect(() => {
+    const fetchLoyalty = async () => {
+      try {
+        const data = await loyaltyApi.getMyPoints();
+        setLoyaltyPoints(data.totalPoints ?? 0);
+      } catch {
+        setLoyaltyPoints(0);
+      } finally {
+        setLoyaltyLoading(false);
+      }
+    };
+    if (user) fetchLoyalty();
+    else setLoyaltyLoading(false);
   }, [user]);
 
   const handleNewAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +150,13 @@ export default function Checkout() {
       : voucher.discount;
   }
 
-  const total = subtotal + shippingFee - discount;
+  // Loyalty points discount: capped at 50% of subtotal and available points
+  const maxLoyaltyDiscount = Math.floor(subtotal * 0.5); // 50% cap
+  const loyaltyDiscount = useLoyaltyPoints
+    ? Math.min(loyaltyPoints, maxLoyaltyDiscount)
+    : 0;
+
+  const total = subtotal + shippingFee - discount - loyaltyDiscount;
 
   const handleApplyVoucher = () => {
     setVoucherError('');
@@ -195,25 +223,24 @@ export default function Checkout() {
         }
       }));
 
-      // 6. Handle Payment Redirection or Success Page
-      if (paymentMethod === 'CARD' && orderId) {
-        // VNPay: redirect immediately, no toast
-        try {
-          const checkoutRes = await api.checkoutOrder(orderId, "VNPAY");
-          toast.dismiss(loadingToast);
+      // 6. Always call checkout to handle payment method + loyalty points
+      const checkoutPaymentMethod = paymentMethod === 'CARD' ? 'VNPAY' : 'COD';
+      try {
+        const checkoutRes = await api.checkoutOrder(orderId, checkoutPaymentMethod, loyaltyDiscount);
 
+        if (paymentMethod === 'CARD') {
+          toast.dismiss(loadingToast);
           if (checkoutRes.success && checkoutRes.data) {
-            // Redirect to VNPay payment page
             window.location.href = checkoutRes.data;
             return;
           } else {
             throw new Error("Không lấy được link thanh toán");
           }
-        } catch (paymentErr: any) {
-          toast.dismiss(loadingToast);
-          toast.error("Lỗi khởi tạo thanh toán: " + (paymentErr.message || "Vui lòng thử lại"));
-          return;
         }
+      } catch (paymentErr: any) {
+        toast.dismiss(loadingToast);
+        toast.error("Lỗi khởi tạo thanh toán: " + (paymentErr.message || "Vui lòng thử lại"));
+        return;
       }
 
       // COD: show success toast
@@ -553,6 +580,51 @@ export default function Checkout() {
                   })}
                 </div>
 
+                {/* Loyalty Points Toggle */}
+                {!loyaltyLoading && loyaltyPoints > 0 && (
+                  <div className="border-t-2 border-dashed border-gray-300 pt-4 mb-1">
+                    <div
+                      className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        useLoyaltyPoints
+                          ? 'border-[#D4AF37] bg-[#FFF9E6]'
+                          : 'border-gray-200 hover:border-[#D4AF37]/40'
+                      }`}
+                      onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-lg ${
+                          useLoyaltyPoints ? 'bg-[#D4AF37]' : 'bg-gray-200'
+                        }`}>
+                          <Coins className={`size-5 ${
+                            useLoyaltyPoints ? 'text-white' : 'text-gray-500'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800 text-sm">Sử dụng điểm tích lũy</p>
+                          <p className="text-xs text-gray-500">
+                            Bạn có <span className="font-bold text-[#D4AF37]">{loyaltyPoints.toLocaleString('vi-VN')}</span> điểm
+                            {useLoyaltyPoints && (
+                              <span className="text-gray-400"> · Tối đa 50% đơn hàng</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {useLoyaltyPoints && (
+                          <span className="text-sm font-bold text-[#D4AF37]">-{formatPrice(loyaltyDiscount)}</span>
+                        )}
+                        <div className={`w-10 h-6 rounded-full transition-all relative ${
+                          useLoyaltyPoints ? 'bg-[#D4AF37]' : 'bg-gray-300'
+                        }`}>
+                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                            useLoyaltyPoints ? 'left-[18px]' : 'left-0.5'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Tạm tính:</span>
@@ -566,6 +638,14 @@ export default function Checkout() {
                     <div className="flex justify-between text-[#AF140B]">
                       <span className="font-semibold">Giảm giá:</span>
                       <span className="font-bold">-{formatPrice(discount)}</span>
+                    </div>
+                  )}
+                  {loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-[#D4AF37]">
+                      <span className="font-semibold flex items-center gap-1">
+                        <Coins className="size-4" /> Điểm tích lũy:
+                      </span>
+                      <span className="font-bold">-{formatPrice(loyaltyDiscount)}</span>
                     </div>
                   )}
                   <div className="border-t-2 border-dashed border-gray-300 pt-3 flex justify-between font-bold text-xl">

@@ -97,7 +97,8 @@ export default function ProductManagement() {
         categoryApi.getAll(),
         brandApi.getAll(),
       ]);
-      setProductList(prods || []);
+      // Sort by id descending so most recently added products appear first
+      setProductList((prods || []).sort((a: APIProduct, b: APIProduct) => b.id - a.id));
       setCategories(cats || []);
       setBrands(brnds || []);
     } catch (error: any) {
@@ -125,7 +126,7 @@ export default function ProductManagement() {
       setSearchLoading(true);
       try {
         const results = await productApi.search(value);
-        setProductList(results);
+        setProductList(results.sort((a: APIProduct, b: APIProduct) => b.id - a.id));
       } catch {
         // fallback to client-side filter already showing
       } finally {
@@ -673,7 +674,6 @@ export default function ProductManagement() {
                   <TableHead>Sản phẩm</TableHead>
                   <TableHead>Danh mục</TableHead>
                   <TableHead>Thương hiệu</TableHead>
-                  <TableHead className="text-right">Giá</TableHead>
                   <TableHead className="text-center">Khuyến mãi</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -681,14 +681,14 @@ export default function ProductManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center text-gray-500">
+                    <TableCell colSpan={6} className="h-48 text-center text-gray-500">
                       <Loader2 className="w-8 h-8 mx-auto animate-spin mb-2 text-indigo-500" />
                       Đang tải...
                     </TableCell>
                   </TableRow>
                 ) : filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center text-gray-400">
+                    <TableCell colSpan={6} className="h-48 text-center text-gray-400">
                       <PackageX className="w-10 h-10 mx-auto mb-2" />
                       Không tìm thấy sản phẩm nào
                     </TableCell>
@@ -723,10 +723,7 @@ export default function ProductManagement() {
                       {/* Brand */}
                       <TableCell className="text-sm">{product.brandName || '—'}</TableCell>
 
-                      {/* Price */}
-                      <TableCell className="text-right font-medium text-indigo-700">
-                        {formatPrice(product.minPrice)}
-                      </TableCell>
+
 
                       {/* Promotion */}
                       <TableCell className="text-center">

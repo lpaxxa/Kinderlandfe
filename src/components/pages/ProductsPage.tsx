@@ -4,6 +4,7 @@ import ProductCard from "../shop/ProductCard";
 import { SlidersHorizontal } from "lucide-react";
 import Pagination from "../common/Pagination";
 import api from "../../services/api";
+import { categoryApi, type Category } from "../../services/categoryApi";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -11,6 +12,7 @@ export default function ProductsPage() {
 
   const [brands, setBrands] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
 
   const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("default");
@@ -24,6 +26,13 @@ export default function ProductsPage() {
   const searchTerm = searchParams.get("search") || "";
   const categoryParam = searchParams.get("category") || "";
 
+  // Fetch category tree for parent-child matching
+  useEffect(() => {
+    categoryApi.getAll()
+      .then((data) => setAllCategories(data || []))
+      .catch(() => {});
+  }, []);
+
   // Auto-set category filter from URL query param
   useEffect(() => {
     if (categoryParam) {
@@ -32,6 +41,28 @@ export default function ProductsPage() {
       setSelectedCategory("all");
     }
   }, [categoryParam]);
+
+  // Build set of category names that match selected category (including children of parent)
+  const getMatchingCategoryNames = (selected: string): Set<string> => {
+    if (selected === "all") return new Set();
+    
+    const matchSet = new Set<string>([selected]);
+    
+    // Check if selected is a parent category
+    const parentCat = allCategories.find(
+      (c) => c.name === selected && !c.parentId
+    );
+    if (parentCat) {
+      // Add all child category names
+      allCategories
+        .filter((c) => c.parentId === parentCat.id)
+        .forEach((child) => matchSet.add(child.name));
+    }
+    
+    return matchSet;
+  };
+
+  const matchingCategories = getMatchingCategoryNames(selectedCategory);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -64,7 +95,7 @@ export default function ProductsPage() {
       product.brand === selectedBrand;
     const matchesCategory =
       selectedCategory === "all" ||
-      product.category === selectedCategory;
+      matchingCategories.has(product.category);
     const matchesAge = 
       selectedAge === "all" || 
       product.ageRange === selectedAge;
@@ -77,6 +108,7 @@ export default function ProductsPage() {
       matchesAge
     );
   });
+
 
   
 

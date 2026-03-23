@@ -620,11 +620,13 @@ export const api = {
   /**
    * Initiate checkout for an order
    */
-  checkoutOrder: async (orderId: number, paymentMethod: string = "VNPAY") => {
+  checkoutOrder: async (orderId: number, paymentMethod: string = "VNPAY", pointsToUse: number = 0) => {
     try {
       const endpoint = `/api/v1/orders/${orderId}/checkout`;
-      console.log("Initiating checkout through api.post:", endpoint, { paymentMethod });
-      return await api.post(endpoint, { paymentMethod });
+      const body: any = { paymentMethod };
+      if (pointsToUse > 0) body.pointsToUse = pointsToUse;
+      console.log("Initiating checkout through api.post:", endpoint, body);
+      return await api.post(endpoint, body);
     } catch (error) {
       console.error("Checkout order API error:", error);
       throw error;
