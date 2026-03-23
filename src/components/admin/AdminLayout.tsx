@@ -23,6 +23,12 @@ export default function AdminLayout() {
   // Sidebar navigation items
   const sidebarItems = [
     {
+      section: 'Tổng quan',
+      items: [
+        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
+      ]
+    },
+    {
       section: 'Sản phẩm & Danh mục',
       items: [
         { title: 'Quản lý Sản phẩm', icon: Package, path: '/admin/products' },
@@ -45,12 +51,9 @@ export default function AdminLayout() {
       ]
     },
     {
-      section: 'Báo cáo & Tài chính',
+      section: 'Tài chính',
       items: [
-        { title: 'Dashboard', icon: Activity, path: '/admin/dashboard' },
-        { title: 'Báo cáo Chi tiết', icon: BarChart3, path: '/admin/reports' },
         { title: 'Quản lý Tài chính', icon: DollarSign, path: '/admin/financial' },
-        { title: 'Tồn kho', icon: Store, path: '/admin/inventory' },
       ]
     },
   ];
