@@ -65,7 +65,6 @@ export default function EnhancedAdminDashboard() {
       section: 'Báo cáo & Tài chính',
       items: [
         { title: 'Dashboard Tổng quan', icon: Activity, path: '/admin/overview' },
-        { title: 'Báo cáo Chi tiết', icon: BarChart3, path: '/admin/reports' },
         { title: 'Quản lý Tài chính', icon: DollarSign, path: '/admin/financial' },
       ]
     },
