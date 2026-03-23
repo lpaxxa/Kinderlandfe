@@ -132,6 +132,28 @@ export default function OrderHistory() {
   const locationKey = useLocation().key;
 
   useEffect(() => { fetchOrders(); fetchReturnRequests(); }, [locationKey]);
+
+  // Auto-refresh: visibilitychange + polling every 15s
+  useEffect(() => {
+    const refetch = () => { fetchOrders(); fetchReturnRequests(); };
+
+    // Refresh when tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refetch();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Light polling every 15s (only when tab is visible)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') refetch();
+    }, 15000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
+  }, []);
+
   useEffect(() => { setPage(1); }, [selectedTab]);
 
   // ── Handlers ──

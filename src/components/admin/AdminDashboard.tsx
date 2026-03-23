@@ -81,7 +81,7 @@ export default function AdminDashboard() {
       financialApi.getFinancialOverview(),
       api.get('/api/v1/orders?page=0&size=200'),
       api.get('/api/v1/products?size=1000'),
-      api.get('/api/v1/accounts?page=0&size=1000'),
+      api.get('/api/v1/admin/accounts'),
       api.get('/api/v1/return-requests?page=0&size=100'),
     ]);
 
@@ -124,47 +124,40 @@ export default function AdminDashboard() {
     .map(([key, cfg]) => ({ name: cfg.label, value: ordersByStatus[key] || 0, status: key }))
     .filter(d => d.value > 0);
 
-  // Revenue by day (last 7 days from order data)
-  const revenueByDay = (() => {
-    const days: Record<string, number> = {};
+  // Revenue by month (last 6 months from order data)
+  const MONTH_NAMES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+  const revenueByMonth = (() => {
+    const months: Record<string, number> = {};
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-      days[key] = 0;
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${MONTH_NAMES[d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`;
+      months[key] = 0;
     }
     allOrders.forEach(o => {
       if (o.orderStatus === 'CANCELLED') return;
       const date = new Date(o.createdAt || o.orderDate);
-      const diff = Math.floor((now.getTime() - date.getTime()) / 86400000);
-      if (diff < 7 && diff >= 0) {
-        const key = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-        if (days[key] !== undefined) days[key] += (o.totalAmount || 0);
-      }
+      const key = `${MONTH_NAMES[date.getMonth()]}/${date.getFullYear().toString().slice(-2)}`;
+      if (months[key] !== undefined) months[key] += (o.totalAmount || 0);
     });
-    return Object.entries(days).map(([day, revenue]) => ({ day, revenue }));
+    return Object.entries(months).map(([month, revenue]) => ({ month, revenue }));
   })();
 
-  // Orders per day bar chart
-  const ordersPerDay = (() => {
-    const days: Record<string, number> = {};
+  // Orders per month bar chart
+  const ordersPerMonth = (() => {
+    const months: Record<string, number> = {};
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-      days[key] = 0;
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${MONTH_NAMES[d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`;
+      months[key] = 0;
     }
     allOrders.forEach(o => {
       const date = new Date(o.createdAt || o.orderDate);
-      const diff = Math.floor((now.getTime() - date.getTime()) / 86400000);
-      if (diff < 7 && diff >= 0) {
-        const key = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-        if (days[key] !== undefined) days[key]++;
-      }
+      const key = `${MONTH_NAMES[date.getMonth()]}/${date.getFullYear().toString().slice(-2)}`;
+      if (months[key] !== undefined) months[key]++;
     });
-    return Object.entries(days).map(([day, count]) => ({ day, count }));
+    return Object.entries(months).map(([month, count]) => ({ month, count }));
   })();
 
   // Return status for horizontal bar
@@ -183,9 +176,10 @@ export default function AdminDashboard() {
   // Top products by order frequency
   const productFreq: Record<string, number> = {};
   allOrders.forEach(o => {
-    if (o.orderItems) {
-      o.orderItems.forEach((item: any) => {
-        const name = item.productName || `SKU-${item.skuId}`;
+    const items = o.items || o.orderItems;
+    if (items && Array.isArray(items)) {
+      items.forEach((item: any) => {
+        const name = item.productName || item.skuName || `SKU-${item.skuId}`;
         productFreq[name] = (productFreq[name] || 0) + (item.quantity || 1);
       });
     }
@@ -257,12 +251,12 @@ export default function AdminDashboard() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-gray-800">
                   <DollarSign className="w-4 h-4 text-[#AF140B]" />
-                  Doanh thu 7 ngày gần nhất
+                  Doanh thu theo tháng
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={revenueByDay} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <AreaChart data={revenueByMonth} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <defs>
                       <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#AF140B" stopOpacity={0.3} />
@@ -270,7 +264,7 @@ export default function AdminDashboard() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                     <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#9ca3af' }} width={55} />
                     <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="revenue" name="Doanh thu" stroke="#AF140B" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#AF140B', r: 4, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
@@ -331,14 +325,14 @@ export default function AdminDashboard() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-gray-800">
                   <ShoppingCart className="w-4 h-4 text-blue-500" />
-                  Số đơn hàng 7 ngày
+                  Số đơn hàng theo tháng
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={ordersPerDay} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <BarChart data={ordersPerMonth} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} width={30} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="count" name="Đơn hàng" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={40} />
