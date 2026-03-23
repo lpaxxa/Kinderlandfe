@@ -88,7 +88,7 @@ export default function BlogDetailPage() {
         <article className="max-w-4xl mx-auto">
           {/* Thumbnail */}
           {blog.imageUrl && (
-            <div className="w-full aspect-video overflow-hidden rounded-2xl mb-8 shadow-lg">
+            <div className="w-full max-h-[400px] overflow-hidden rounded-2xl mb-8 shadow-lg">
               <img
                 src={blog.imageUrl}
                 alt={blog.title}

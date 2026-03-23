@@ -21,6 +21,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showStoreModal, setShowStoreModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
 
   // ── SKU state ───────────────────────────
   const [skus, setSkus] = useState<any[]>([]);
@@ -164,7 +165,7 @@ export default function ProductDetail() {
 
       {/* ── Product Hero (Image + Info) ──── */}
       <div className="grid md:grid-cols-[1fr_340px] gap-6">
-        {/* Image gallery – LEGO-style: vertical thumbnails left + main image right */}
+        {/* Image gallery – vertical thumbnails left + main image right */}
         <div className="flex gap-4">
           {/* Vertical thumbnail strip */}
           {(() => {
@@ -175,21 +176,16 @@ export default function ProductDetail() {
                 .map((s: any) => ({ url: s.imageUrl, label: s.color || s.type || s.skuCode })),
             ];
             if (allImages.length <= 1) return null;
+            const displayedImage = selectedImage || product.image;
             return (
               <div className="flex flex-col gap-2 overflow-y-auto max-h-[500px] pr-1">
                 {allImages.map((img, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => {
-                      if (idx === 0) setSelectedSku(skus[0]);
-                      else {
-                        const match = skus.find((s: any) => s.imageUrl === img.url);
-                        if (match) setSelectedSku(match);
-                      }
-                    }}
+                    onClick={() => setSelectedImage(img.url)}
                     className={`flex-shrink-0 w-[72px] h-[72px] rounded-lg border-2 overflow-hidden transition-all ${
-                      (idx === 0 && !selectedSku?.imageUrl) || selectedSku?.imageUrl === img.url
+                      displayedImage === img.url
                         ? 'border-[#AF140B] shadow-md'
                         : 'border-gray-200 hover:border-gray-400'
                     }`}
@@ -204,7 +200,7 @@ export default function ProductDetail() {
           {/* Main image container – fixed height, image always fully visible */}
           <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center h-[500px] p-6">
             <img
-              src={selectedSku?.imageUrl || product.image}
+              src={selectedImage || product.image}
               alt={product.name}
               className="max-w-full max-h-full object-contain"
             />
@@ -247,12 +243,17 @@ export default function ProductDetail() {
                 Giá gốc: {formatPrice(currentOriginalPrice)}
               </div>
             )}
-            {selectedSku && (
+            {selectedSku && (selectedSku.color || selectedSku.size || selectedSku.type) && (
               <div className="flex items-center gap-2 flex-wrap mt-2">
                 {selectedSku.color && (
                   <span className="inline-flex items-center gap-1 text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
                     <span className="w-3 h-3 rounded-full border border-gray-400" style={{ backgroundColor: selectedSku.color.toLowerCase() }} />
                     {selectedSku.color}
+                  </span>
+                )}
+                {selectedSku.type && (
+                  <span className="text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
+                    {selectedSku.type}
                   </span>
                 )}
                 {selectedSku.size && (
@@ -265,7 +266,10 @@ export default function ProductDetail() {
           </div>
 
           {/* SKU Selector */}
-          <SkuSelector skus={skus} selectedSku={selectedSku} onSelectSku={setSelectedSku} />
+          <SkuSelector skus={skus} selectedSku={selectedSku} onSelectSku={(sku) => {
+            setSelectedSku(sku);
+            setSelectedImage(sku?.imageUrl || product.image);
+          }} />
 
           {/* Actions: Quantity, Cart, Wishlist, Store, Policy */}
           <ProductActions

@@ -21,6 +21,8 @@ import {
   PackageX,
   Upload,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { productApi, Product as APIProduct } from '../../services/productApi';
@@ -56,6 +58,10 @@ export default function ProductManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBrand, setFilterBrand] = useState('all');
+
+  // ── Pagination state ──────────────────────────────────────────────────
+  const PRODUCTS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<APIProduct | null>(null);
@@ -134,6 +140,18 @@ export default function ProductManagement() {
     const matchBrand = filterBrand === 'all' || p.brandName === filterBrand;
     return matchCat && matchBrand;
   });
+
+  // ── Pagination logic ──────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters / search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterCategory, filterBrand, productList]);
 
   // ── CRUD handlers ────────────────────────────────────────────────────────
 
@@ -676,7 +694,7 @@ export default function ProductManagement() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProducts.map((product) => (
+                  paginatedProducts.map((product) => (
                     <TableRow key={product.id}>
                       {/* Image */}
                       <TableCell>
@@ -759,6 +777,36 @@ export default function ProductManagement() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls */}
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <div className="flex items-center justify-between border-t pt-4 mt-4 px-2">
+                <p className="text-sm text-gray-500">
+                  Hiển thị {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} / {filteredProducts.length} sản phẩm
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[80px] text-center">
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

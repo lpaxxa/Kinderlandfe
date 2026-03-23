@@ -37,8 +37,8 @@ export default function CartDropdown() {
 
   if (cart.length === 0) {
     return (
-      <div className="absolute top-full right-0 w-96 z-[100]">
-        <div className="bg-white rounded-2xl shadow-2xl border border-[#AF140B]/20 p-6">
+      <div className="absolute top-full -mt-4 -right-2 w-96 z-[100]">
+        <div className="bg-white rounded-2xl p-6">
           <div className="text-center py-8">
             <ShoppingCart className="size-16 text-gray-300 mx-auto mb-3" />
             <p className="text-[#2C2C2C] font-semibold">Giỏ hàng trống</p>
@@ -49,7 +49,7 @@ export default function CartDropdown() {
   }
 
   return (
-    <div className="absolute top-full right-0 w-96 z-[100]">
+    <div className="absolute top-full -mt-4 -right-2 w-96 z-[100]">
       <div className="bg-white rounded-2xl shadow-2xl border border-[#AF140B]/20 p-6">
         <h3 className="font-bold text-[#2C2C2C] text-lg mb-4">
           Giỏ hàng ({cart.reduce((sum, item) => sum + item.quantity, 0)})

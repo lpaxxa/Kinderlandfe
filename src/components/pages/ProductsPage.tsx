@@ -119,7 +119,7 @@ export default function ProductsPage() {
       try {
         setLoading(true);
 
-        const response = await api.get("/api/v1/products", { params: { page: 0, size: 100 } });
+        const response = await api.get("/api/v1/products?size=1000");
 
         const data = response.data;
 
