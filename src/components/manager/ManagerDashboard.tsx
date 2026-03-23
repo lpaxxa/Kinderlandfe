@@ -147,7 +147,7 @@ export default function ManagerDashboard() {
           <CardContent className="space-y-2">
             {[
               // { label: 'Nhập hàng từ kho chính', desc: 'Tạo đơn nhập mới', path: '/manager/import-orders' },
-              { label: 'Quản lý nhập hàng', desc: 'Theo dõi đơn nhập', path: '/manager/import-management' },
+              { label: 'Quản lý chuyển kho', desc: 'Theo dõi đơn chuyển', path: '/manager/import-management' },
               { label: 'Báo cáo hàng lỗi', desc: 'Thanh lý sản phẩm lỗi', path: '/manager/defective-report' },
             ].map((item, idx) => (
               <button

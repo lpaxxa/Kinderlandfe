@@ -47,7 +47,7 @@ export default function ManagerLayout() {
       section: 'Nhập hàng & Vận chuyển',
       items: [
         // { title: 'Nhập hàng từ kho chính', icon: Package, path: '/manager/import-orders' },
-        { title: 'Quản lý nhập hàng', icon: ClipboardList, path: '/manager/import-management' },
+        { title: 'Quản lý chuyển kho', icon: ClipboardList, path: '/manager/import-management' },
         { title: 'Báo cáo hàng lỗi', icon: AlertTriangle, path: '/manager/defective-report' },
         { title: 'Kiểm kê thực tế', icon: ClipboardList, path: '/manager/physical-count' },
       ]

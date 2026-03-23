@@ -72,9 +72,9 @@ export default function FinancialOverview() {
     const metrics = data
         ? [
             {
-                label: 'Tổng Doanh Thu',
-                value: formatCurrency(data.totalRevenue),
-                sub: 'Tính từ khi khai trương',
+                label: 'Doanh Thu Thuần',
+                value: formatCurrency(data.netRevenue ?? data.totalRevenue),
+                sub: data.totalRefunds ? `Sau hoàn trả: -${formatCurrency(data.totalRefunds)}` : 'Tính từ khi khai trương',
                 icon: DollarSign,
                 color: 'text-green-600',
                 bg: 'bg-green-50',
@@ -82,8 +82,8 @@ export default function FinancialOverview() {
             },
             {
                 label: 'Doanh Thu Hôm Nay',
-                value: formatCurrency(data.todayRevenue),
-                sub: new Date().toLocaleDateString('vi-VN', {
+                value: formatCurrency(data.todayNetRevenue ?? data.todayRevenue),
+                sub: data.todayRefunds ? `Hoàn trả: -${formatCurrency(data.todayRefunds)}` : new Date().toLocaleDateString('vi-VN', {
                     weekday: 'long',
                     day: '2-digit',
                     month: '2-digit',
@@ -96,8 +96,8 @@ export default function FinancialOverview() {
             },
             {
                 label: 'Doanh Thu Tháng Này',
-                value: formatCurrency(data.thisMonthRevenue),
-                sub: new Date().toLocaleDateString('vi-VN', {
+                value: formatCurrency(data.thisMonthNetRevenue ?? data.thisMonthRevenue),
+                sub: data.thisMonthRefunds ? `Hoàn trả: -${formatCurrency(data.thisMonthRefunds)}` : new Date().toLocaleDateString('vi-VN', {
                     month: 'long',
                     year: 'numeric',
                 }),

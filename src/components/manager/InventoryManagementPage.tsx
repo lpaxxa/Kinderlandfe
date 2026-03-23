@@ -81,7 +81,7 @@ export default function InventoryManagementPage() {
             item.skuCode.toLowerCase().includes(q) ||
             String(item.skuId).includes(q)
         );
-    });
+    }).sort((a, b) => b.skuId - a.skuId);
 
     const outOfStock = items.filter((i) => i.quantity === 0).length;
     const lowStock = items.filter((i) => i.quantity > 0 && i.quantity <= 5).length;

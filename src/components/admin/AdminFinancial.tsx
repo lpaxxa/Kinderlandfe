@@ -99,12 +99,14 @@ export default function AdminFinancial() {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-gray-500 mb-1">Tổng doanh thu</p>
+                <p className="text-sm text-gray-500 mb-1">Doanh thu thuần</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {loading ? '...' : overview ? formatCurrency(overview.totalRevenue) : '0 ₫'}
+                  {loading ? '...' : overview ? formatCurrency(overview.netRevenue ?? overview.totalRevenue) : '0 ₫'}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
-                  <span className="text-xs text-gray-400">Từ trước tới nay</span>
+                  <span className="text-xs text-gray-400">
+                    {overview?.totalRefunds ? `Hoàn trả: -${formatCurrency(overview.totalRefunds)}` : 'Từ trước tới nay'}
+                  </span>
                 </div>
               </div>
               <div className="bg-[#AF140B]/10 p-3 rounded-xl">
@@ -120,11 +122,12 @@ export default function AdminFinancial() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Tháng này</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {loading ? '...' : overview ? formatCurrency(overview.thisMonthRevenue) : '0 ₫'}
+                  {loading ? '...' : overview ? formatCurrency(overview.thisMonthNetRevenue ?? overview.thisMonthRevenue) : '0 ₫'}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
-                  <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-xs font-medium text-green-600">Đang cập nhật</span>
+                  <span className="text-xs font-medium text-green-600">
+                    {overview?.thisMonthRefunds ? `Hoàn trả: -${formatCurrency(overview.thisMonthRefunds)}` : 'Đang cập nhật'}
+                  </span>
                 </div>
               </div>
               <div className="bg-[#D4AF37]/10 p-3 rounded-xl">
@@ -140,10 +143,12 @@ export default function AdminFinancial() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Hôm nay</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {loading ? '...' : overview ? formatCurrency(overview.todayRevenue) : '0 ₫'}
+                  {loading ? '...' : overview ? formatCurrency(overview.todayNetRevenue ?? overview.todayRevenue) : '0 ₫'}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
-                  <span className="text-xs font-medium text-green-600">Hôm nay</span>
+                  <span className="text-xs font-medium text-green-600">
+                    {overview?.todayRefunds ? `Hoàn trả: -${formatCurrency(overview.todayRefunds)}` : 'Hôm nay'}
+                  </span>
                 </div>
               </div>
               <div className="bg-green-100 p-3 rounded-xl">

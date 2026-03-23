@@ -146,7 +146,7 @@ function AppContent() {
             <Route path="returns" element={<ManagerReturnPage />} />
             <Route path="stock-transfer" element={<StockTransferPage />} />
             <Route path="import-orders" element={<ImportOrderPage />} />
-            <Route path="import-management" element={<StoreTransfer />} />
+            <Route path="import-management" element={<StockTransferPage />} />
             <Route path="defective-report" element={<DefectiveReportPage />} />
             <Route path="physical-count" element={<PhysicalCountPage />} />
             <Route path="orders" element={<ManagerOrderPage />} />

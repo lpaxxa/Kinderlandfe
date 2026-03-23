@@ -67,7 +67,11 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [financial, setFinancial] = useState<{ totalRevenue: number; todayRevenue: number; thisMonthRevenue: number } | null>(null);
+  const [financial, setFinancial] = useState<{
+    totalRevenue: number; todayRevenue: number; thisMonthRevenue: number;
+    totalRefunds?: number; todayRefunds?: number; thisMonthRefunds?: number;
+    netRevenue?: number; todayNetRevenue?: number; thisMonthNetRevenue?: number;
+  } | null>(null);
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [products, setProducts] = useState<any[]>([]);
@@ -89,8 +93,11 @@ export default function AdminDashboard() {
     if (results[1].status === 'fulfilled') {
       const d = results[1].value?.data ?? results[1].value;
       const content = d?.content ?? d ?? [];
-      setAllOrders(Array.isArray(content) ? content : []);
-      setTotalOrders(d?.totalElements ?? content.length);
+      const sorted = (Array.isArray(content) ? content : []).sort((a: any, b: any) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      setAllOrders(sorted);
+      setTotalOrders(d?.totalElements ?? sorted.length);
     }
     if (results[2].status === 'fulfilled') {
       const d = results[2].value;
@@ -124,7 +131,7 @@ export default function AdminDashboard() {
     .map(([key, cfg]) => ({ name: cfg.label, value: ordersByStatus[key] || 0, status: key }))
     .filter(d => d.value > 0);
 
-  // Revenue by month (last 6 months from order data)
+  // Revenue by month (last 6 months from order data, NET = gross - refunds)
   const MONTH_NAMES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
   const revenueByMonth = (() => {
     const months: Record<string, number> = {};
@@ -134,13 +141,22 @@ export default function AdminDashboard() {
       const key = `${MONTH_NAMES[d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`;
       months[key] = 0;
     }
+    // Add gross revenue from delivered orders only
     allOrders.forEach(o => {
-      if (o.orderStatus === 'CANCELLED') return;
+      if (o.orderStatus !== 'DELIVERED') return;
       const date = new Date(o.createdAt || o.orderDate);
       const key = `${MONTH_NAMES[date.getMonth()]}/${date.getFullYear().toString().slice(-2)}`;
       if (months[key] !== undefined) months[key] += (o.totalAmount || 0);
     });
-    return Object.entries(months).map(([month, revenue]) => ({ month, revenue }));
+    // Subtract refunded amounts
+    returns.forEach((r: any) => {
+      if (r.returnStatus === 'REFUNDED' && r.refundedAt && r.refundAmount) {
+        const date = new Date(r.refundedAt);
+        const key = `${MONTH_NAMES[date.getMonth()]}/${date.getFullYear().toString().slice(-2)}`;
+        if (months[key] !== undefined) months[key] -= r.refundAmount;
+      }
+    });
+    return Object.entries(months).map(([month, revenue]) => ({ month, revenue: Math.max(0, revenue) }));
   })();
 
   // Orders per month bar chart
@@ -193,8 +209,8 @@ export default function AdminDashboard() {
 
   // Stat cards
   const statCards = [
-    { label: 'Tổng doanh thu', value: financial ? fmtMoney(financial.totalRevenue) : '—', sub: financial ? `Hôm nay: ${fmtMoney(financial.todayRevenue)}` : '', icon: DollarSign, bg: 'bg-gradient-to-br from-[#AF140B] to-[#d92e24]', onClick: () => navigate('/admin/financial') },
-    { label: 'Doanh thu tháng', value: financial ? fmtMoney(financial.thisMonthRevenue) : '—', sub: 'Tháng hiện tại', icon: TrendingUp, bg: 'bg-gradient-to-br from-[#D4AF37] to-[#e8c94a]', onClick: () => navigate('/admin/financial') },
+    { label: 'Doanh thu thuần', value: financial ? fmtMoney(financial.netRevenue ?? financial.totalRevenue) : '—', sub: financial?.totalRefunds ? `Hoàn trả: -${fmtMoney(financial.totalRefunds)}` : `Hôm nay: ${fmtMoney(financial?.todayRevenue ?? 0)}`, icon: DollarSign, bg: 'bg-gradient-to-br from-[#AF140B] to-[#d92e24]', onClick: () => navigate('/admin/financial') },
+    { label: 'Doanh thu tháng', value: financial ? fmtMoney(financial.thisMonthNetRevenue ?? financial.thisMonthRevenue) : '—', sub: financial?.thisMonthRefunds ? `Hoàn trả: -${fmtMoney(financial.thisMonthRefunds)}` : 'Tháng hiện tại', icon: TrendingUp, bg: 'bg-gradient-to-br from-[#D4AF37] to-[#e8c94a]', onClick: () => navigate('/admin/financial') },
     { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), sub: `${ordersByStatus['PENDING'] || 0} chờ xử lý`, icon: ShoppingCart, bg: 'bg-gradient-to-br from-blue-600 to-blue-500', onClick: () => navigate('/admin/orders') },
     { label: 'Sản phẩm', value: products.length.toLocaleString('vi-VN'), sub: `${products.filter((p: any) => p.active !== false).length} hoạt động`, icon: Package, bg: 'bg-gradient-to-br from-emerald-600 to-emerald-500', onClick: () => navigate('/admin/products') },
     { label: 'Người dùng', value: users.length.toLocaleString('vi-VN'), sub: 'Tổng tài khoản', icon: Users, bg: 'bg-gradient-to-br from-violet-600 to-violet-500', onClick: () => navigate('/admin/users') },
@@ -425,8 +441,7 @@ export default function AdminDashboard() {
                         <div key={o.orderId} className="flex items-center justify-between pb-2.5 border-b last:border-0 last:pb-0">
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm text-gray-800">ORD-{o.orderId}</p>
-                            <p className="text-xs text-gray-500 truncate">{o.customerName || o.accountEmail || '—'}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{fmtDate(o.createdAt || o.orderDate || '')}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{fmtDate(o.createdAt || '')}</p>
                           </div>
                           <div className="text-right ml-3 flex-shrink-0">
                             <p className="font-bold text-sm text-gray-800">{fmtMoney(o.totalAmount || 0)}</p>

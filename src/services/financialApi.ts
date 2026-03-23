@@ -7,6 +7,12 @@ export interface FinancialOverviewData {
     totalRevenue: number;
     todayRevenue: number;
     thisMonthRevenue: number;
+    totalRefunds?: number;
+    todayRefunds?: number;
+    thisMonthRefunds?: number;
+    netRevenue?: number;
+    todayNetRevenue?: number;
+    thisMonthNetRevenue?: number;
 }
 
 export interface FinancialOverviewResponse {
