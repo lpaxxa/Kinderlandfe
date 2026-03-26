@@ -69,6 +69,23 @@ const handleOtpChange = (value: string, index: number) => {
   }
 };
 
+const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  e.preventDefault();
+  const pasteData = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 6);
+  if (!pasteData) return;
+
+  const newOtp = [...otp];
+  for (let i = 0; i < 6; i++) {
+    newOtp[i] = pasteData[i] || "";
+  }
+  setOtp(newOtp);
+
+  // auto focus next empty or last
+  const focusIndex = pasteData.length < 6 ? pasteData.length : 5;
+  const next = document.getElementById(`otp-${focusIndex}`);
+  next?.focus();
+};
+
 const handleSendOtp = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
@@ -569,6 +586,7 @@ const handleResetPassword = async (e: React.FormEvent) => {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(e.target.value, index)}
+                  onPaste={handleOtpPaste}
                   className="w-12 h-12 text-center border-2 border-gray-300 rounded-xl text-lg font-bold 
                   focus:border-[#AF140B] focus:ring-2 focus:ring-[#AF140B]/40 transition-all"
                 />
