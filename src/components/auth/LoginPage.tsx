@@ -114,7 +114,7 @@ const [forgotEmail, setForgotEmail] = useState("");
 
   const handleGoogleLogin = async () => {
     try {
-      toast.info("Đang khởi tạo Google Sign-In...");
+
       const googleAuth = GoogleAuthService.getInstance();
       await googleAuth.initialize();
       const credential = await googleAuth.signIn();
@@ -124,7 +124,7 @@ const [forgotEmail, setForgotEmail] = useState("");
         return;
       }
 
-      toast.info("Đang xác thực với server...");
+
       const response = await api.loginWithGoogle(credential);
       const data = response.data || response;
 
@@ -137,7 +137,7 @@ const [forgotEmail, setForgotEmail] = useState("");
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
 
-      toast.success(`Chào mừng ${email}!`);
+
 
       if (role === "ROLE_ADMIN") {
         loginAdmin({ id: email, email, name: email, role: "admin" });
