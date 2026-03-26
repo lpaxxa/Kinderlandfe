@@ -37,7 +37,7 @@ export default function CartDropdown() {
 
   if (cart.length === 0) {
     return (
-      <div className="absolute top-full -mt-4 -right-2 w-96 z-[100]">
+      <div className="absolute top-full mt-0 -right-2 w-96 z-[100]">
         <div className="bg-white rounded-2xl p-6">
           <div className="text-center py-8">
             <ShoppingCart className="size-16 text-gray-300 mx-auto mb-3" />
@@ -49,27 +49,27 @@ export default function CartDropdown() {
   }
 
   return (
-    <div className="absolute top-full -mt-4 -right-2 w-96 z-[100]">
+    <div className="absolute top-full mt-0 -right-2 w-96 z-[100]">
       <div className="bg-white rounded-2xl shadow-2xl border border-[#AF140B]/20 p-6">
         <h3 className="font-bold text-[#2C2C2C] text-lg mb-4">
           Giỏ hàng ({cart.reduce((sum, item) => sum + item.quantity, 0)})
         </h3>
-        
+
         {/* Cart Items - Max height with scroll */}
         <div className="max-h-[300px] overflow-y-auto space-y-4 mb-4">
           {cart.map((item, index) => {
             const sku = item.skuResponse || item.sku || {};
             const product = item.productResponse || sku.productResponse || item.product || item || {};
-            
+
             // CRITICAL: Identify the correct Cart Item ID for API calls
             const cartItemId = item.id || item.cartItemId || item.idCart || item.cartId;
-            
+
             // Alignment: imageUrl from productResponse (preferred), SKU Code from skuResponse
             const name = product.name || item.productName || item.name || "Sản phẩm";
             const imageUrl = product.imageUrl || item.imageUrl || item.productImageUrl || product.image || item.image || "/placeholder.png";
             const price = sku.price || item.price || item.unitPrice || product.minPrice || product.price || 0;
             const skuCode = sku.skuCode || item.skuCode || "";
-            
+
             return (
               <div
                 key={`cart-dropdown-${cartItemId || index}`}
@@ -99,7 +99,7 @@ export default function CartDropdown() {
                       <p className="text-[10px] text-gray-500">Màu: {sku.color}</p>
                     )}
                   </div>
-                  
+
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-2 mt-2">
                     <button
