@@ -59,7 +59,7 @@ export default defineConfig({
     proxy: {
       // Proxy tất cả request /api sang BE localhost:8080
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },

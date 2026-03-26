@@ -42,6 +42,7 @@ import InventoryCheck from './components/staff/InventoryCheck';
 import StoreTransfer from './components/staff/StoreTransfer';
 import DefectiveReport from './components/staff/DefectiveReport';
 
+import ResetPasswordPage from './components/auth/reset-password';
 // Manager
 import ManagerDashboard from './components/manager/ManagerDashboard';
 import ManagerLayout from './components/manager/ManagerLayout';
@@ -62,6 +63,8 @@ import ReturnRequestPage from './components/customer/ReturnRequestPage';
 import CustomerProfile from './components/customer/CustomerProfile';
 import LoyaltyPoints from './components/customer/LoyaltyPoints';
 import Wishlist from './components/pages/Wishlist';
+
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
@@ -105,7 +108,8 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Admin/Staff/Manager use the same /login page */}
-
+          
+  <Route path="/reset-password" element={<ResetPasswordPage />} />
           {/* Admin Routes - wrapped in AdminLayout for persistent sidebar */}
           <Route
             path="/admin"
