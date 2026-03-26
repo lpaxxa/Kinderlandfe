@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useApp } from "../../context/AppContext";
 import { useAdmin } from "../../context/AdminContext";
-
+import { useEffect } from "react";
 import {
   AlertCircle,
   Mail,
@@ -35,7 +35,86 @@ export default function LoginPage() {
   const { login, register, setUser } = useApp();
 
   const [showForgotModal, setShowForgotModal] = useState(false);
+const [step, setStep] = useState<"email" | "reset">("email");
+
 const [forgotEmail, setForgotEmail] = useState("");
+const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+const [newPassword, setNewPassword] = useState("");
+
+const [loading, setLoading] = useState(false);
+const [countdown, setCountdown] = useState(0);
+
+useEffect(() => {
+  if (countdown <= 0) return;
+
+  const timer = setInterval(() => {
+    setCountdown((prev) => prev - 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [countdown]);
+
+
+const handleOtpChange = (value: string, index: number) => {
+  if (!/^[0-9]?$/.test(value)) return;
+
+  const newOtp = [...otp];
+  newOtp[index] = value;
+  setOtp(newOtp);
+
+  // auto focus next
+  if (value && index < 5) {
+    const next = document.getElementById(`otp-${index + 1}`);
+    next?.focus();
+  }
+};
+
+const handleSendOtp = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    await api.post("/api/v1/auth/forgot-password", {
+      email: forgotEmail,
+    });
+
+    toast.success("OTP đã được gửi!");
+    setStep("reset");
+    setCountdown(60); // 👈 bắt đầu đếm ngược
+
+  } catch (err) {
+    toast.error("Gửi OTP thất bại!");
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleResetPassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    await api.post("/api/v1/auth/reset-password", {
+      email: forgotEmail,
+      otp: otp.join(""),
+      newPassword,
+    });
+
+    toast.success("Đổi mật khẩu thành công!");
+
+    setTimeout(() => {
+      setShowForgotModal(false);
+      setStep("email");
+      setOtp(["", "", "", "", "", ""]);
+      setNewPassword("");
+    }, 1200);
+
+  } catch (error) {
+    toast.error("OTP không hợp lệ hoặc hết hạn!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,67 +490,127 @@ const [forgotEmail, setForgotEmail] = useState("");
         </div>
       </div>
       {showForgotModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    
-    <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-2xl relative animate-fadeIn">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85, y: 40 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.85, y: 40 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="bg-white w-full max-w-md p-6 rounded-2xl shadow-2xl relative border border-gray-200"
+    >
 
       {/* Close */}
       <button
-        onClick={() => setShowForgotModal(false)}
-        className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+        onClick={() => {
+          setShowForgotModal(false);
+          setStep("email");
+        }}
+        className="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-lg"
       >
         ✕
       </button>
 
-      <h2 className="text-2xl font-bold text-center mb-4">
-        Quên mật khẩu
-      </h2>
+      {/* STEP 1 */}
+      {step === "email" && (
+        <>
+          <h2 className="text-2xl font-bold text-center mb-4">
+            Quên mật khẩu
+          </h2>
 
-      <p className="text-sm text-gray-500 text-center mb-5">
-        Nhập email để nhận OTP
-      </p>
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="email"
+                placeholder="Nhập email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-3 rounded-xl border bg-gray-50 focus:border-[#AF140B] focus:ring-2 focus:ring-[#AF140B]/30"
+              />
+            </div>
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
+            <button
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-[#AF140B] text-white font-bold flex items-center justify-center gap-2"
+            >
+              {loading && (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {loading ? "Đang gửi..." : "Gửi OTP"}
+            </button>
+          </form>
+        </>
+      )}
 
-          try {
-            await api.post("/api/v1/auth/forgot-password", {
-              email: forgotEmail,
-            });
+      {/* STEP 2 */}
+      {step === "reset" && (
+        <>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Nhập mã OTP
+          </h2>
 
-            toast.success("OTP đã được gửi!");
-            setShowForgotModal(false);
+          {countdown > 0 && (
+            <p className="text-center text-sm text-gray-500 mb-3">
+              OTP hết hạn sau <span className="font-bold text-[#AF140B]">{countdown}s</span>
+            </p>
+          )}
 
-            // chuyển qua reset luôn
-            navigate("/reset-password", { state: { email: forgotEmail } });
+          <form onSubmit={handleResetPassword} className="space-y-5">
 
-          } catch (err) {
-            toast.error("Gửi OTP thất bại!");
-          }
-        }}
-        className="space-y-4"
-      >
-        <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="email"
-            placeholder="Nhập email"
-            value={forgotEmail}
-            onChange={(e) => setForgotEmail(e.target.value)}
-            required
-            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus:outline-none focus:border-[#AF140B]"
-          />
-        </div>
+            {/* OTP BOX */}
+            <div className="flex justify-between gap-2">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  id={`otp-${index}`}
+                  type="text"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(e.target.value, index)}
+                  className="w-12 h-12 text-center border-2 border-gray-300 rounded-xl text-lg font-bold 
+                  focus:border-[#AF140B] focus:ring-2 focus:ring-[#AF140B]/40 transition-all"
+                />
+              ))}
+            </div>
 
-        <button
-          type="submit"
-          className="w-full py-3 rounded-xl bg-[#AF140B] text-white font-bold hover:bg-[#8D0F08]"
-        >
-          Gửi OTP
-        </button>
-      </form>
-    </div>
+            {/* PASSWORD */}
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="password"
+                placeholder="Mật khẩu mới"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-3 rounded-xl border bg-gray-50 focus:border-[#AF140B] focus:ring-2 focus:ring-[#AF140B]/30"
+              />
+            </div>
+
+            <button
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-[#AF140B] text-white font-bold flex items-center justify-center gap-2"
+            >
+              {loading && (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {loading ? "Đang xử lý..." : "Đổi mật khẩu"}
+            </button>
+
+            {/* BACK */}
+            <button
+              type="button"
+              onClick={() => setStep("email")}
+              className="w-full text-sm text-gray-500 hover:text-black"
+            >
+              ← Nhập lại email
+            </button>
+
+          </form>
+        </>
+      )}
+    </motion.div>
   </div>
 )}
     </div>
