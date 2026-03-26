@@ -80,6 +80,8 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
     '/api/v1/auth/login/google',
     '/api/v1/auth/register',
     '/api/v1/auth/refresh',
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/reset-password',
   ];
 
   // Endpoints that are public only for GET requests

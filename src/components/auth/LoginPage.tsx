@@ -34,6 +34,9 @@ export default function LoginPage() {
   const location = useLocation();
   const { login, register, setUser } = useApp();
 
+  const [showForgotModal, setShowForgotModal] = useState(false);
+const [forgotEmail, setForgotEmail] = useState("");
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -346,7 +349,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="text-sm text-gray-600 hover:text-[#AF140B] transition-colors"
-                  onClick={() => toast.info("Tính năng đang được phát triển")}
+                  onClick={() => setShowForgotModal(true)}
                 >
                   Quên mật khẩu?
                 </button>
@@ -407,6 +410,70 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+      {showForgotModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    
+    <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-2xl relative animate-fadeIn">
+
+      {/* Close */}
+      <button
+        onClick={() => setShowForgotModal(false)}
+        className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+      >
+        ✕
+      </button>
+
+      <h2 className="text-2xl font-bold text-center mb-4">
+        Quên mật khẩu
+      </h2>
+
+      <p className="text-sm text-gray-500 text-center mb-5">
+        Nhập email để nhận OTP
+      </p>
+
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+
+          try {
+            await api.post("/api/v1/auth/forgot-password", {
+              email: forgotEmail,
+            });
+
+            toast.success("OTP đã được gửi!");
+            setShowForgotModal(false);
+
+            // chuyển qua reset luôn
+            navigate("/reset-password", { state: { email: forgotEmail } });
+
+          } catch (err) {
+            toast.error("Gửi OTP thất bại!");
+          }
+        }}
+        className="space-y-4"
+      >
+        <div className="relative">
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="email"
+            placeholder="Nhập email"
+            value={forgotEmail}
+            onChange={(e) => setForgotEmail(e.target.value)}
+            required
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus:outline-none focus:border-[#AF140B]"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full py-3 rounded-xl bg-[#AF140B] text-white font-bold hover:bg-[#8D0F08]"
+        >
+          Gửi OTP
+        </button>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -441,3 +508,4 @@ function Input({
     </div>
   );
 }
+
